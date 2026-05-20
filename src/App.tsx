@@ -1,14 +1,16 @@
-import React from 'react';
+// import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
-// import Home from './pages/Home';
+import Lobby from './pages/Lobby';
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Register />} />
+        {/* Page d'accueil : redirige vers lobby (ou login selon besoin) */}
+        <Route path="/" element={<Lobby />} />
+        <Route path="/lobby" element={<Lobby />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
       </Routes>

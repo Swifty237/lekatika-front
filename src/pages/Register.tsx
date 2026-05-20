@@ -22,7 +22,7 @@ const Register: React.FC = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 bg-green-gradient font-suse">
             <div className="w-full flex h-[90vh] items-center justify-around">
-                <div className="max-w-md w-full min-h-[70vh] space-y-8 bg-red-gradient px-8 rounded-md shadow-xl">
+                <div className="max-w-md w-full space-y-8 bg-red-gradient px-8 rounded-lg shadow-xl pb-4">
                     <div>
                         <img src="img/logo-transparent.png" alt="" />
                     </div>
@@ -45,7 +45,7 @@ const Register: React.FC = () => {
                                     type="text"
                                     autoComplete="username"
                                     required
-                                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
                                     placeholder="Nom d'utilisateur"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
@@ -61,7 +61,7 @@ const Register: React.FC = () => {
                                     type="email"
                                     autoComplete="email"
                                     required
-                                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
                                     placeholder="Adresse email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
@@ -77,7 +77,7 @@ const Register: React.FC = () => {
                                     type="password"
                                     autoComplete="new-password"
                                     required
-                                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
                                     placeholder="Mot de passe"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
@@ -93,7 +93,7 @@ const Register: React.FC = () => {
                                     type="password"
                                     autoComplete="new-password"
                                     required
-                                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
                                     placeholder="Confirmer le mot de passe"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -104,7 +104,7 @@ const Register: React.FC = () => {
                         <div>
                             <button
                                 type="submit"
-                                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                className="group relative w-full flex justify-center py-2 px-4 shadow-xl text-sm font-medium rounded-md text-white bg-[#ea2020]/80 hover:bg-[#ea2020] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ea2020]/90"
                             >
                                 S'inscrire
                             </button>
@@ -113,7 +113,7 @@ const Register: React.FC = () => {
                         <div className="text-sm text-center">
                             <Link
                                 to="/login"
-                                className="font-medium text-yellow-300 hover:text-yellow-500"
+                                className="font-medium text-yellow-200 hover:text-yellow-400"
                             >
                                 Déjà un compte ? Se connecter
                             </Link>
@@ -121,14 +121,14 @@ const Register: React.FC = () => {
                     </form>
                 </div>
 
-                <div className="w-[50%] h-[90%]">
-                    <div className="flex flex-col items-center h-full shadow-xl border border-green-800">
+                <div className="w-[50%]">
+                    <div className="flex flex-col items-center h-full shadow-xl rounded-sm">
                         <div className="p-8 mt-8">
                             <h1 className="text-center text-8xl font-extrabold text-white">
                                 Le katika.com
                             </h1>
                         </div>
-                        <div className="">
+                        <div className="mb-8 pb-8">
                             <img className="flex" src="img/main-illustration-desktop@2x.png" alt="" />
                         </div>
                     </div>
