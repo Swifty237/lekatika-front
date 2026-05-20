@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.bg-green-gradient {
+    background: linear-gradient(250deg, #029d43, black);
+}
+
+.bg-red-gradient {
+    background: linear-gradient(270deg, #ac0a0a, black);
+}
