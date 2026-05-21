@@ -104,7 +104,7 @@ const Register: React.FC = () => {
                         <div>
                             <button
                                 type="submit"
-                                className="group relative w-full flex justify-center py-2 px-4 shadow-xl text-sm font-medium rounded-md text-white bg-[#ea2020]/80 hover:bg-[#ea2020] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ea2020]/90"
+                                className="group relative w-full flex justify-center py-2 px-4 shadow-xl text-sm font-medium rounded-md text-white border border-transparent hover:bg-[#ea2020] hover:border-[#ea2020] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ea2020]"
                             >
                                 S'inscrire
                             </button>
