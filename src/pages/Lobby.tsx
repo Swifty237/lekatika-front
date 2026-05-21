@@ -13,7 +13,7 @@ const Lobby: React.FC = () => {
                     Tout fonctionne correctement ! Cette page est protégée par le layout avec navbar et footer.
                 </p>
 
-                <div className="md:w-[55vw] pt-8 flex w-full justify-around items-center">
+                <div className="lg:w-[55vw] pt-8 flex w-full justify-around items-center">
                     <label className="flex items-center gap-2">
                         <input type="checkbox" checked className="w-4 h-4 rounded focus:ring-[#0FAC71]" />
                         <span>Argent fictif</span>
@@ -29,7 +29,7 @@ const Lobby: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="md:w-[55vw] min-h-[30vh] bg-white mt-8 rounded-md">
+                <div className="w-full lg:w-[55vw] min-h-[30vh] bg-white mt-8 rounded-md">
 
                 </div>
             </div>
