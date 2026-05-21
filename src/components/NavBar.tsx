@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, HomeIcon, LogOut, User, UserCog, Bell, Search } from 'lucide-react';
+import { ChevronDown, ChevronUp, HomeIcon, User, UserCog, Bell, Search, SquareArrowRightExit, CirclePlus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
@@ -10,7 +11,7 @@ const Navbar: React.FC = () => {
     };
 
     return (
-        <nav className="shadow-md">
+        <nav className="shadow-md text-sm">
             <div className="container mx-auto px-4 flex justify-between items-center">
                 {/* Logo */}
                 <div className="flex items-center">
@@ -23,6 +24,25 @@ const Navbar: React.FC = () => {
                         <span>Lobby</span>
                     </Link>
                 </div>
+
+                <div className="flex items-center">
+                    <Select onValueChange={() => { }} value={""}>
+                        <SelectTrigger className="w-[90px] shadow-lg">
+                            <SelectValue placeholder="0" />
+                        </SelectTrigger>
+                        <SelectContent className="text-white mt-8 ms-4 ps-4 pb-1 bg-[#0FAC71] border-b shadox-lg">
+                            <SelectItem value="0">Argent réel : 0</SelectItem>
+                            <SelectItem value="0">Argent fictif : 0</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <button type="button" onClick={() => { }} className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-1 px-4 shadow-xl rounded-lg">
+                        <p>Argent réel</p>
+                        <CirclePlus className="h-4 w-4 ms-2" />
+                    </button>
+                </div>
+
+
 
                 <div className="flex">
                     <div className="flex items-center justify-center me-4">
@@ -53,9 +73,9 @@ const Navbar: React.FC = () => {
                         >
                             <div className="flex items-center">
                                 <User className="h-4 w-4 me-2" />
-                                <span className="text-lg">Username</span>
+                                <span>Username</span>
                             </div>
-                            {isUserMenuOpen ? <ChevronUp /> : <ChevronDown />}
+                            {isUserMenuOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </button>
                     </div>
                 </div>
@@ -111,7 +131,7 @@ const Navbar: React.FC = () => {
                             className="flex items-center hover:bg-[#0FAC71] w-full p-2"
                         >
                             <span className="flex items-center">
-                                <LogOut className="h-4 w-4 me-2" />
+                                <SquareArrowRightExit className="w-4 h-4 me-2" />
                                 Déconnexion
                             </span>
                         </button>

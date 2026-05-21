@@ -50,14 +50,14 @@ const GameProgress: React.FC = () => {
             {/* Barre d'actions en bas (fixée en bas, mais dans le flux flex grâce à mt-auto) */}
             <div className="backdrop-blur-sm py-4 px-6 flex justify-center gap-4 flex-wrap shadow-2xl rounded-xl self-center mb-8">
                 <button className="hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-full transition duration-200 shadow-lg">
-                    <MessageCircle w-4 h-4 />
+                    <MessageCircle className="w-4 h-4" />
                 </button>
                 <button className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                    <Pause w-4 h-4 className="me-2" />
+                    <Pause className="w-4 h-4 me-2" />
                     <span>Se mettre en pause</span>
                 </button>
                 <button className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                    <SquareArrowRightExit w-4 h-4 className="me-2" />
+                    <SquareArrowRightExit className="w-4 h-4 me-2" />
                     <span>Quitter</span>
                 </button>
             </div>
