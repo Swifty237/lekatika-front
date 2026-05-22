@@ -18,9 +18,9 @@ const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 bg-green-gradient font-suse">
-            <div className="w-full flex h-[90vh] items-center justify-around">
-                <div className="max-w-md w-full space-y-8 bg-red-gradient px-8 rounded-lg pb-4">
+        <div className="min-h-screen py-12 px-2 sm:px-6 lg:px-8 bg-green-gradient font-suse">
+            <div className="flex flex-col-reverse xl:flex-row justify-around items-center w-full min-h-[85vh]">
+                <div className="xl:w-[25vw] bg-red-gradient px-8 mx-8 rounded-lg shadow-xl pb-4">
                     <div>
                         <img src="img/logo-transparent.png" alt="" />
                     </div>
@@ -70,7 +70,7 @@ const Login: React.FC = () => {
                         <div>
                             <button
                                 type="submit"
-                                className="group relative w-full flex justify-center py-2 px-4 shadow-xl text-sm font-medium rounded-md text-white border border-transparent hover:bg-[#ea2020] hover:border-[#ea2020] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ea2020]"
+                                className="group relative w-full flex justify-center py-2 px-4 shadow-xl text-sm font-medium rounded-lg text-white border border-transparent hover:bg-[#ea2020] hover:border-[#ea2020] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ea2020]"
                             >
                                 Se connecter
                             </button>
@@ -87,16 +87,14 @@ const Login: React.FC = () => {
                     </form>
                 </div>
 
-                <div className="w-[50%]">
-                    <div className="flex flex-col items-center h-full shadow-xl rounded-sm">
-                        <div className="p-8 mt-8">
-                            <h1 className="text-center text-8xl font-extrabold text-white">
-                                Le katika.com
-                            </h1>
-                        </div>
-                        <div className="mb-8 pb-8">
-                            <img className="flex" src="img/main-illustration-desktop@2x.png" alt="" />
-                        </div>
+                <div className="flex flex-col items-center xl:w-[50vw] rounded-sm">
+                    <div className="p-8">
+                        <h1 className="text-center text-5xl md:text-7xl font-extrabold text-white">
+                            Le katika.com
+                        </h1>
+                    </div>
+                    <div className="mb-8 pb-8">
+                        <img className="flex" src="img/main-illustration-desktop@2x.png" alt="" />
                     </div>
                 </div>
             </div>
