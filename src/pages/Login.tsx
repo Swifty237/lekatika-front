@@ -20,7 +20,7 @@ const Login: React.FC = () => {
     return (
         <div className="min-h-screen py-12 px-2 sm:px-6 lg:px-8 bg-green-gradient font-suse">
             <div className="flex flex-col-reverse xl:flex-row justify-around items-center w-full min-h-[85vh]">
-                <div className="xl:w-[25vw] bg-red-gradient px-8 mx-8 rounded-lg shadow-xl pb-4">
+                <div className="xl:w-[30vw] bg-red-gradient px-8 mx-8 rounded-lg shadow-xl pb-4">
                     <div>
                         <img src="img/logo-transparent.png" alt="" />
                     </div>
@@ -89,7 +89,7 @@ const Login: React.FC = () => {
 
                 <div className="flex flex-col items-center xl:w-[50vw] rounded-sm">
                     <div className="p-8">
-                        <h1 className="text-center text-5xl md:text-7xl font-extrabold text-white">
+                        <h1 className="text-center text-7xl font-extrabold text-white">
                             Le katika.com
                         </h1>
                     </div>

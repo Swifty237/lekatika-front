@@ -6,7 +6,7 @@ const Lobby: React.FC = () => {
     return (
         <MainLayout>
             <div className="flex flex-col items-center">
-                <h1 className="text-4xl font-bold mb-4">
+                <h1 className="text-4xl font-bold my-4">
                     Bienvenue dans le Lobby
                 </h1>
                 <p className="text-lg">
