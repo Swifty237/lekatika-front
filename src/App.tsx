@@ -6,10 +6,12 @@ import Lobby from './pages/Lobby';
 import Notifications from './pages/Notifications';
 import Profile from './pages/Profile';
 import GameProgress from './pages/GameProgress';
+import { Toaster } from "@/components/ui/sonner"
 
 function App() {
   return (
     <Router>
+      <Toaster />
       <Routes>
         {/* Page d'accueil : redirige vers lobby (ou login selon besoin) */}
         <Route path="/" element={<Lobby />} />

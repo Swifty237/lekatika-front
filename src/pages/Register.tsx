@@ -1,23 +1,84 @@
+"use client"
+import { Eye, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from "sonner"
 
 const Register: React.FC = () => {
-    const [username, setUsername] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    // const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const navigate = useNavigate();
+
+    const [credentials, setCredentials] = useState({
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+    });
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setCredentials(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (password !== confirmPassword) {
-            setError('Les mots de passe ne correspondent pas');
+
+        if (credentials.password !== credentials.confirmPassword) {
+            setError("Les mots de passe ne correspondent pas !");
+            toast("Les mots de passe ne correspondent pas !");
             return;
         }
-        // Simuler une inscription réussie
-        alert(`Inscription réussie pour ${username}`);
-        // Normalement, on enverrait les données à une API
+
+        // setLoading(true);
+        const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
+
+        try {
+            const response = await fetch(`${API_URL}/api/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: credentials.username,
+                    email: credentials.email,
+                    password: credentials.password
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                toast("Compte utilisateur créé avec succès !");
+
+                // Réinitialise les champs
+                setCredentials({ username: '', email: '', password: '', confirmPassword: '' });
+
+                // Redirige vers la page de login
+                navigate('/lobby');
+            } else {
+                toast('Erreur : ' + (result.error || 'Impossible de créer le compte'));
+            }
+        } catch (err) {
+            console.error(err);
+            toast("Erreur réseau lors de la création du compte.");
+        } finally {
+            // setLoading(false);
+        }
     };
+
+
+    // const handleSubmit = (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     if (password !== confirmPassword) {
+    //         setError('Les mots de passe ne correspondent pas');
+    //         return;
+    //     }
+    //     // Simuler une inscription réussie
+    //     alert(`Inscription réussie pour ${username}`);
+    //     // Normalement, on enverrait les données à une API
+    // };
 
     return (
         <div className="min-h-screen py-12 px-2 sm:px-6 lg:px-8 bg-green-gradient font-suse">
@@ -36,9 +97,9 @@ const Register: React.FC = () => {
                         )}
                         <div className="space-y-4">
                             <div>
-                                <label htmlFor="username" className="sr-only">
+                                {/* <label htmlFor="username" className="sr-only">
                                     Nom d'utilisateur
-                                </label>
+                                </label> */}
                                 <input
                                     id="username"
                                     name="username"
@@ -47,14 +108,14 @@ const Register: React.FC = () => {
                                     required
                                     className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
                                     placeholder="Nom d'utilisateur"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
+                                    value={credentials.username}
+                                    onChange={handleInputChange}
                                 />
                             </div>
                             <div>
-                                <label htmlFor="email" className="sr-only">
+                                {/* <label htmlFor="email" className="sr-only">
                                     Email
-                                </label>
+                                </label> */}
                                 <input
                                     id="email"
                                     name="email"
@@ -63,41 +124,58 @@ const Register: React.FC = () => {
                                     required
                                     className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
                                     placeholder="Adresse email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    value={credentials.email}
+                                    onChange={handleInputChange}
                                 />
                             </div>
-                            <div>
-                                <label htmlFor="password" className="sr-only">
+                            <div className="relative">
+                                {/* <label htmlFor="password" className="sr-only">
                                     Mot de passe
-                                </label>
+                                </label> */}
                                 <input
                                     id="password"
                                     name="password"
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     autoComplete="new-password"
                                     required
                                     className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
                                     placeholder="Mot de passe"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    value={credentials.password}
+                                    onChange={handleInputChange}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((prev) => !prev)}
+                                    className="absolute right-3 top-1/4  text-gray-600 hover:text-gray-800"
+                                    tabIndex={-1} // ne gêne pas la navigation clavier
+                                >
+                                    {showPassword ? <Eye size={22} /> : <EyeOff size={22} />}
+                                </button>
                             </div>
-                            <div>
-                                <label htmlFor="confirm-password" className="sr-only">
+
+                            <div className="relative">
+                                {/* <label htmlFor="password" className="sr-only">
                                     Confirmer le mot de passe
-                                </label>
+                                </label> */}
                                 <input
                                     id="confirm-password"
-                                    name="confirm-password"
-                                    type="password"
+                                    name="confirmPassword"
+                                    type={showConfirmPassword ? "text" : "password"}
                                     autoComplete="new-password"
                                     required
                                     className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
                                     placeholder="Confirmer le mot de passe"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    value={credentials.confirmPassword}
+                                    onChange={handleInputChange}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                                    className="absolute right-3 top-1/4  text-gray-600 hover:text-gray-800"
+                                    tabIndex={-1} // ne gêne pas la navigation clavier
+                                >
+                                    {showConfirmPassword ? <Eye size={22} /> : <EyeOff size={22} />}
+                                </button>
                             </div>
                         </div>
 

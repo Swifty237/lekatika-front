@@ -7,6 +7,8 @@ const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const handleLogout = () => {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('username');
         navigate('/login');
     };
 

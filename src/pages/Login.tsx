@@ -1,19 +1,79 @@
+import { Eye, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const Login: React.FC = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const navigate = useNavigate();
+    const [showPassword, setShowPassword] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+
+    const [credentials, setCredentials] = useState({
+        username: '',
+        password: ''
+    });
+
+    //   const [loading, setLoading] = useState(false);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setCredentials(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Simuler une authentification (à remplacer par une vraie API)
-        if (email === 'test@test.com' && password === 'password') {
-            alert('Connexion réussie');
-            // Rediriger vers le tableau de bord ou la page d'accueil plus tard
-        } else {
-            setError('Email ou mot de passe incorrect');
+        // setLoading(true);
+
+        const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
+
+        try {
+            const response = await fetch(`${API_URL}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(credentials),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                if (result.token) {
+                    localStorage.setItem('authToken', result.token);
+                    localStorage.setItem('username', result.user.username);
+                }
+
+                setCredentials({ username: '', password: '' });
+
+                //   setLoading(false);
+                navigate("/lobby");
+
+                toast(
+                    <div className="px-4 py-2 bg-green-400 text-white">
+                        Connexion reussie !
+                    </div>
+                );
+
+            } else {
+
+                toast(
+                    <div>
+                        Erreur : {result.error}
+                    </div>
+                );
+                // setLoading(false);
+                // alert('Erreur : ' + (result.error || 'Identifiants incorrects'));
+            }
+        } catch (err) {
+            console.error(err);
+
+            toast(
+                <div>
+                    Erreur réseau : Erreur lors de la connexion
+                </div>
+            );
+
+            // alert("Erreur réseau lors de la connexion.");
+        } finally {
+            //   setLoading(false);
         }
     };
 
@@ -29,41 +89,49 @@ const Login: React.FC = () => {
                         Connexion
                     </h2>
                     <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                        {error && (
+                        {/* {error && (
                             <div className="text-red-500 text-sm text-center">{error}</div>
-                        )}
+                        )} */}
                         <div className="rounded-md shadow-sm -space-y-px">
                             <div>
                                 <label htmlFor="email" className="sr-only">
                                     Email
                                 </label>
                                 <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    autoComplete="email"
+                                    id="username"
+                                    name="username"
+                                    type="text"
+                                    autoComplete="username"
                                     required
                                     className="appearance-none rounded-none relative block w-full px-3 py-2 mb-4 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
-                                    placeholder="Adresse email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="Nom d'utilisateur ou email"
+                                    value={credentials.username}
+                                    onChange={handleInputChange}
                                 />
                             </div>
-                            <div>
-                                <label htmlFor="password" className="sr-only">
+                            <div className="relative">
+                                {/* <label htmlFor="password" className="sr-only">
                                     Mot de passe
-                                </label>
+                                </label> */}
                                 <input
                                     id="password"
                                     name="password"
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     autoComplete="current-password"
                                     required
                                     className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
                                     placeholder="Mot de passe"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    value={credentials.password}
+                                    onChange={handleInputChange}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((prev) => !prev)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-800"
+                                    tabIndex={-1} // ne gêne pas la navigation clavier
+                                >
+                                    {showPassword ? <Eye size={22} /> : <EyeOff size={22} />}
+                                </button>
                             </div>
                         </div>
 
