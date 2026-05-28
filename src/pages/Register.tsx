@@ -2,7 +2,7 @@
 import { Eye, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from "sonner"
+import { showToast } from '@/components/CustomToast';
 
 const Register: React.FC = () => {
     const [error, setError] = useState('');
@@ -29,7 +29,7 @@ const Register: React.FC = () => {
 
         if (credentials.password !== credentials.confirmPassword) {
             setError("Les mots de passe ne correspondent pas !");
-            toast("Les mots de passe ne correspondent pas !");
+            showToast("Les mots de passe ne correspondent pas !", "error");
             return;
         }
 
@@ -43,7 +43,8 @@ const Register: React.FC = () => {
                 body: JSON.stringify({
                     username: credentials.username,
                     email: credentials.email,
-                    password: credentials.password
+                    password: credentials.password,
+                    freeChipsAmount: 3000.00
                 }),
             });
 
@@ -51,13 +52,11 @@ const Register: React.FC = () => {
 
             if (response.ok) {
 
-                toast(
-                    <div>
-                        <span>Compte utilisateur créé avec succès !</span>
-                        <br />
-                        <span>Utilisez vos identifiants pour vous connectez</span>
-                    </div>
-                );
+                showToast("Compte utilisateur créé avec succès !", "success");
+
+                setTimeout(() => {
+                    showToast("Utilisez vos identifiants pour vous connectez !", "success");
+                }, 3000)
 
                 // Réinitialise les champs
                 setCredentials({ username: '', email: '', password: '', confirmPassword: '' });
@@ -65,11 +64,11 @@ const Register: React.FC = () => {
                 // Redirige vers la page de login
                 navigate('/login');
             } else {
-                toast('Erreur : ' + (result.error || 'Impossible de créer le compte'));
+                showToast('Erreur : ' + (result.error || 'Impossible de créer le compte'), "error");
             }
         } catch (err) {
             console.error(err);
-            toast("Erreur réseau lors de la création du compte.");
+            showToast("Erreur réseau lors de la création du compte !", "error");
         } finally {
             // setLoading(false);
         }
@@ -145,7 +144,7 @@ const Register: React.FC = () => {
                                     type={showPassword ? "text" : "password"}
                                     autoComplete="new-password"
                                     required
-                                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
+                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
                                     placeholder="Mot de passe"
                                     value={credentials.password}
                                     onChange={handleInputChange}
@@ -170,7 +169,7 @@ const Register: React.FC = () => {
                                     type={showConfirmPassword ? "text" : "password"}
                                     autoComplete="new-password"
                                     required
-                                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
+                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
                                     placeholder="Confirmer le mot de passe"
                                     value={credentials.confirmPassword}
                                     onChange={handleInputChange}

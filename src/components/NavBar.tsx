@@ -1,14 +1,52 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronDown, ChevronUp, HomeIcon, UserCog, Bell, Search, SquareArrowRightExit, CirclePlus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import ConfirmationDialog from '@/components/ConfirmationDialog';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [username, setUsername] = useState<string>('');
+    const [selectedCurrency, setSelectedCurrency] = useState<string>('0'); // '0' = fictif, '1' = réel
+    const [freeChipsAmount, setFreeChipsAmount] = useState<string>('');
+    const [confirmOpen, setConfirmOpen] = useState(false);
+
+    const handleCurrencyChange = (value: string) => {
+        setSelectedCurrency(value);
+        // Ici, tu pourras plus tard :
+        // - mettre à jour un contexte global (ex: devise courante)
+        // - recharger les soldes correspondants depuis l'API
+        // - stocker la préférence dans localStorage
+        console.log("Devise sélectionnée :", value === '0' ? 'Argent fictif' : 'Argent réel');
+    };
+
+    const handleSubmit = async () => { };
+
+    // Récupérer le username depuis localStorage au chargement et à chaque changement de route
+    useEffect(() => {
+        const storedUsername = localStorage.getItem('username');
+        const storedfreeChipsAmount = localStorage.getItem('freeChipsAmount');
+
+        if (storedUsername) {
+            setUsername(storedUsername);
+        } else {
+            setUsername('');
+        }
+
+        if (storedfreeChipsAmount) {
+            setFreeChipsAmount(storedfreeChipsAmount);
+        } else {
+            setFreeChipsAmount('');
+        }
+    }, [location]); // se met à jour quand la route change (ex: après login redirige vers /lobby)
+
+
     const handleLogout = () => {
         localStorage.removeItem('authToken');
         localStorage.removeItem('username');
+        localStorage.removeItem('freeChipsAmount');
         navigate('/login');
     };
 
@@ -28,19 +66,19 @@ const Navbar: React.FC = () => {
                 </div>
 
                 <div className="flex items-center">
-                    <Select onValueChange={() => { }} value={""}>
-                        <SelectTrigger className="w-[90px] shadow-lg">
-                            <SelectValue placeholder="0" />
+                    <Select onValueChange={handleCurrencyChange} value={selectedCurrency}>
+                        <SelectTrigger className="w-[125px] shadow-lg">
+                            <SelectValue placeholder="Argent fictif" />
                         </SelectTrigger>
                         <SelectContent className="text-white mt-8 pb-1 bg-[#0FAC71] shadow-lg">
-                            <SelectItem value="0">Argent réel : 0</SelectItem>
-                            <SelectItem value="0">Argent fictif : 0</SelectItem>
+                            <SelectItem value="0">Argent fictif</SelectItem>
+                            <SelectItem value="1">Argent réel</SelectItem>
                         </SelectContent>
                     </Select>
 
-                    <button type="button" onClick={() => { }} className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-1 px-2 sm:px-4 shadow-xl rounded-lg">
-                        <p>Argent réel</p>
-                        <CirclePlus className="h-4 w-4 ms-2" />
+                    <button type="button" onClick={() => setConfirmOpen(true)} className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-1 px-2 sm:px-4 shadow-xl rounded-lg">
+                        <p>{selectedCurrency === '0' ? Number(freeChipsAmount) : 0}</p>
+                        <CirclePlus className="h-4 w-4 ms-4" />
                     </button>
                 </div>
 
@@ -77,7 +115,7 @@ const Navbar: React.FC = () => {
                                 <div className="rounded-full border h-8 w-8 my-1 me-4">
                                     <img src="img/user-avatar.png" className="w-full rounded-full" alt="" />
                                 </div>
-                                <span className="hidden md:flex">Username</span>
+                                <span className="hidden md:flex">{username || 'Invité'} </span>
                             </div>
                             {isUserMenuOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </button>
@@ -114,7 +152,7 @@ const Navbar: React.FC = () => {
                             <div className="rounded-full border h-8 w-8 my-1 me-4">
                                 <img src="img/user-avatar.png" className="w-full rounded-full" alt="" />
                             </div>
-                            <span className="hidden md:flex">Username</span>
+                            <span className="hidden md:flex">{username || 'Invité'} </span>
                         </div>
                         {isUserMenuOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
@@ -178,6 +216,21 @@ const Navbar: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmationDialog
+                open={confirmOpen}
+                // loading={calculationLoading}
+                // devis={devisData}
+                title="Récapitulatif de la demande"
+                description="Veuillez vérifier vos informations avant de valider."
+                confirmText="Validez et envoyez"
+                cancelText="Annulez la demande"
+                onConfirm={async () => {
+                    await handleSubmit();
+                    setConfirmOpen(false);
+                }}
+                onCancel={() => setConfirmOpen(false)}
+            />
         </nav>
     );
 };

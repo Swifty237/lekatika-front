@@ -1,7 +1,7 @@
 import { Eye, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { showToast } from '@/components/CustomToast';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -39,6 +39,7 @@ const Login: React.FC = () => {
                 if (result.token) {
                     localStorage.setItem('authToken', result.token);
                     localStorage.setItem('username', result.user.username);
+                    localStorage.setItem('freeChipsAmount', result.user.freeChipsAmount);
                 }
 
                 setCredentials({ username: '', password: '' });
@@ -46,30 +47,18 @@ const Login: React.FC = () => {
                 //   setLoading(false);
                 navigate("/lobby");
 
-                toast(
-                    <div>
-                        Connexion reussie !
-                    </div>
-                );
+                showToast("Connexion reussie !", "success");
 
             } else {
 
-                toast(
-                    <div>
-                        Erreur : {result.error}
-                    </div>
-                );
+                showToast("Erreur :" + result.error, "error");
                 // setLoading(false);
                 // alert('Erreur : ' + (result.error || 'Identifiants incorrects'));
             }
         } catch (err) {
             console.error(err);
 
-            toast(
-                <div>
-                    Erreur réseau : Erreur lors de la connexion
-                </div>
-            );
+            showToast("Erreur réseau : Erreur lors de la connexion !", "error");
 
             // alert("Erreur réseau lors de la connexion.");
         } finally {
@@ -119,7 +108,7 @@ const Login: React.FC = () => {
                                     type={showPassword ? "text" : "password"}
                                     autoComplete="current-password"
                                     required
-                                    className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
+                                    className="appearance-none rounded-none block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm"
                                     placeholder="Mot de passe"
                                     value={credentials.password}
                                     onChange={handleInputChange}
