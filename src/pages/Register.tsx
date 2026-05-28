@@ -50,13 +50,20 @@ const Register: React.FC = () => {
             const result = await response.json();
 
             if (response.ok) {
-                toast("Compte utilisateur créé avec succès !");
+
+                toast(
+                    <div>
+                        <span>Compte utilisateur créé avec succès !</span>
+                        <br />
+                        <span>Utilisez vos identifiants pour vous connectez</span>
+                    </div>
+                );
 
                 // Réinitialise les champs
                 setCredentials({ username: '', email: '', password: '', confirmPassword: '' });
 
                 // Redirige vers la page de login
-                navigate('/lobby');
+                navigate('/login');
             } else {
                 toast('Erreur : ' + (result.error || 'Impossible de créer le compte'));
             }

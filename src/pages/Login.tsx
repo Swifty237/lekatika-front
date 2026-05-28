@@ -47,7 +47,7 @@ const Login: React.FC = () => {
                 navigate("/lobby");
 
                 toast(
-                    <div className="px-4 py-2 bg-green-400 text-white">
+                    <div>
                         Connexion reussie !
                     </div>
                 );
