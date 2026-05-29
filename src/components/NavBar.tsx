@@ -35,8 +35,6 @@ const Navbar: React.FC = () => {
         console.log(`Ajout de ${amount} jetons. Nouveau solde : ${newAmount}`);
     };
 
-    // const handleSubmit = async () => { };
-
     // Récupérer le username depuis localStorage au chargement et à chaque changement de route
     useEffect(() => {
         const storedUsername = localStorage.getItem('username');
@@ -83,7 +81,7 @@ const Navbar: React.FC = () => {
                         <SelectTrigger className="w-[125px] shadow-lg">
                             <SelectValue placeholder="Argent fictif" />
                         </SelectTrigger>
-                        <SelectContent className="text-white mt-8 pb-1 bg-[#0FAC71] shadow-lg">
+                        <SelectContent className="text-white bg-[#0FAC71] shadow-lg">
                             <SelectItem value="0">Argent fictif</SelectItem>
                             <SelectItem value="1">Argent réel</SelectItem>
                         </SelectContent>

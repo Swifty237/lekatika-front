@@ -2,12 +2,19 @@ import React, { useEffect, useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { SquareArrowOutUpRight } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import NewTatamiDialog from '@/components/NewTatamiDialog';
 
 const Lobby: React.FC = () => {
 
     const [username, setUsername] = useState<string>('');
+    const [newTatamiOpen, setNewTatamiOpen] = useState(false);
 
     const location = useLocation();
+
+    const handleNewTatami = () => {
+        console.log("New Tatami creation");
+    };
+
 
     // Récupérer le username depuis localStorage au chargement et à chaque changement de route
     useEffect(() => {
@@ -23,9 +30,15 @@ const Lobby: React.FC = () => {
     return (
         <MainLayout>
             <div className="flex flex-col items-center">
-                <h1 className="text-4xl font-bold my-4">
-                    <span className="capitalize">{username + ", "}</span>bienvenue dans le Lobby
+                <h1 className="text-4xl font-bold mt-4 my-4">
+                    Salut <span className="capitalize">{username}</span> !
                 </h1>
+
+                <p className="text-3xl font-bold mb-4">
+                    Bienvenue dans ton Lobby <span className="shadow-xl rounded-full">😄</span>
+                </p>
+
+
                 <p className="text-lg">
                     Tu peux rejoindre un tatami disponible ou bien en créer un nouveau pour t'amuser avec des amis.
                 </p>
@@ -42,16 +55,27 @@ const Lobby: React.FC = () => {
                         </label>
                     </div>
 
-                    <button type="button" onClick={() => { }} className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-2 px-8 shadow-xl rounded-lg">
+                    <button type="button" onClick={() => setNewTatamiOpen(true)} className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-2 px-8 shadow-xl rounded-lg">
                         <SquareArrowOutUpRight className="h-4 w-4 me-2" />
                         <p>Nouveau tatami</p>
                     </button>
                 </div>
 
-                <div className="w-full lg:w-[55vw] min-h-[30vh] bg-white mt-8 rounded-md">
-
+                <div className="w-full flex flex-col justify-center items-center lg:w-[55vw] min-h-[30vh] bg-white mt-8 rounded-md text-black">
+                    <span>Oops ! il n'y a pas de tatami ouvert actuellement...</span>
+                    <span>N'hésite pas à ouvrir un nouveau tatami, ça fait venir les joueurs <span className="shadow-xl rounded-full text-lg">😉</span></span>
                 </div>
             </div>
+
+            <NewTatamiDialog
+                open={newTatamiOpen}
+                onConfirm={() => {
+                    handleNewTatami();
+                    setNewTatamiOpen(false);
+                }}
+                onCancel={() => setNewTatamiOpen(false)}
+            />
+
         </MainLayout>
     );
 };
