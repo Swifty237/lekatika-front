@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronDown, ChevronUp, HomeIcon, UserCog, Bell, Search, SquareArrowRightExit, CirclePlus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import ConfirmationDialog from '@/components/ConfirmationDialog';
+// import ConfirmationDialog from '@/components/ConfirmationDialog';
+import AddChipsDialog from '@/components/AddChipsDialog';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
@@ -11,7 +12,10 @@ const Navbar: React.FC = () => {
     const [username, setUsername] = useState<string>('');
     const [selectedCurrency, setSelectedCurrency] = useState<string>('0'); // '0' = fictif, '1' = réel
     const [freeChipsAmount, setFreeChipsAmount] = useState<string>('');
-    const [confirmOpen, setConfirmOpen] = useState(false);
+    // const [confirmOpen, setConfirmOpen] = useState(false);
+    const [addChipsOpen, setAddChipsOpen] = useState(false);
+    //   const [maxBuyIn, setMaxBuyIn] = useState<string>('');
+    // const minBuyIn = 1000;
 
     const handleCurrencyChange = (value: string) => {
         setSelectedCurrency(value);
@@ -22,7 +26,16 @@ const Navbar: React.FC = () => {
         console.log("Devise sélectionnée :", value === '0' ? 'Argent fictif' : 'Argent réel');
     };
 
-    const handleSubmit = async () => { };
+    const handleAddChips = (amount: number) => {
+        // Mettre à jour le montant des freeChips
+        const newAmount = Number(freeChipsAmount) + amount;
+        setFreeChipsAmount(newAmount.toString());
+        localStorage.setItem('freeChipsAmount', newAmount.toString());
+        // Ici plus tard tu pourras appeler une API pour synchroniser avec le backend
+        console.log(`Ajout de ${amount} jetons. Nouveau solde : ${newAmount}`);
+    };
+
+    // const handleSubmit = async () => { };
 
     // Récupérer le username depuis localStorage au chargement et à chaque changement de route
     useEffect(() => {
@@ -76,7 +89,11 @@ const Navbar: React.FC = () => {
                         </SelectContent>
                     </Select>
 
-                    <button type="button" onClick={() => setConfirmOpen(true)} className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-1 px-2 sm:px-4 shadow-xl rounded-lg">
+                    <button
+                        type="button"
+                        onClick={() => setAddChipsOpen(true)}
+                        className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-1 px-2 sm:px-4 shadow-xl rounded-lg"
+                    >
                         <p>{selectedCurrency === '0' ? Number(freeChipsAmount) : 0}</p>
                         <CirclePlus className="h-4 w-4 ms-4" />
                     </button>
@@ -159,6 +176,18 @@ const Navbar: React.FC = () => {
                 </div>
             </div>
 
+            <AddChipsDialog
+                open={addChipsOpen}
+                currencyType="free"
+                currentAmount={Number(freeChipsAmount)}
+                maxTotal={3000}
+                onConfirm={(amount) => {
+                    handleAddChips(amount);
+                    setAddChipsOpen(false);
+                }}
+                onCancel={() => setAddChipsOpen(false)}
+            />
+
             {isUserMenuOpen && (
                 <div className="backdrop-blur-sm px-4 shadow-xl flex justify-center">
                     <div className="px-8 pb-3 md:w-[50vw]">
@@ -216,21 +245,6 @@ const Navbar: React.FC = () => {
                     </div>
                 </div>
             )}
-
-            <ConfirmationDialog
-                open={confirmOpen}
-                // loading={calculationLoading}
-                // devis={devisData}
-                title="Récapitulatif de la demande"
-                description="Veuillez vérifier vos informations avant de valider."
-                confirmText="Validez et envoyez"
-                cancelText="Annulez la demande"
-                onConfirm={async () => {
-                    await handleSubmit();
-                    setConfirmOpen(false);
-                }}
-                onCancel={() => setConfirmOpen(false)}
-            />
         </nav>
     );
 };
