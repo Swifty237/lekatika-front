@@ -9,6 +9,7 @@ import GameProgress from './pages/GameProgress';
 import { Toaster } from "@/components/ui/sonner"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from './components/ui/tooltip';
+import JoinTable from './components/JoinTable';
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ function App() {
               <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
               <Route path="/notifications" element={<PrivateRoute><Notifications /></PrivateRoute>} />
               <Route path="/game-progress" element={<PrivateRoute><GameProgress /></PrivateRoute>} />
+              <Route path="/join/:id" element={<PrivateRoute><JoinTable /></PrivateRoute>} />
             </Routes>
           </Router>
         </TooltipProvider>

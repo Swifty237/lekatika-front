@@ -1,7 +1,54 @@
 import { MessageCircle, Pause, SquareArrowRightExit } from 'lucide-react';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const GameProgress: React.FC = () => {
+    const [tatami, setTatami] = useState<unknown>(null);
+    const navigate = useNavigate();
+
+    const handleLeaveTatami = () => {
+        localStorage.removeItem('currentTatami');
+        localStorage.removeItem('currentTableId');
+        navigate('/lobby');
+    };
+
+    useEffect(() => {
+        const fetchTable = async () => {
+            const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
+
+            const tableId = localStorage.getItem('currentTableId');
+            const token = localStorage.getItem('authToken');
+
+            if (!tableId || !token) {
+                navigate('/lobby');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/tables/${tableId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setTatami(data.table);
+                    // Optionnel : mettre à jour localStorage pour usage ultérieur
+                    localStorage.setItem('currentTatami', JSON.stringify(data.table));
+                } else {
+                    navigate('/lobby');
+                }
+            } catch (err) {
+                console.error(err);
+                navigate('/lobby');
+            }
+        };
+        fetchTable();
+    }, [navigate]);
+
+    if (!tatami) {
+        return <div className="text-white text-center mt-20">Chargement...</div>;
+    }
+
     return (
         // Conteneur principal : fond dégradé vertical, occupation totale, colonne flex
         <div className="min-h-screen flex flex-col bg-green-gradient font-suse">
@@ -56,7 +103,7 @@ const GameProgress: React.FC = () => {
                     <Pause className="w-4 h-4 me-2" />
                     <span>Se mettre en pause</span>
                 </button>
-                <button className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
+                <button onClick={handleLeaveTatami} className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
                     <SquareArrowRightExit className="w-4 h-4 me-2" />
                     <span>Quitter</span>
                 </button>

@@ -1,19 +1,57 @@
 import { Eye, EyeOff } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { showToast } from '@/components/CustomToast';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
+
     const [showPassword, setShowPassword] = useState(false);
-
-
     const [credentials, setCredentials] = useState({
         username: '',
         password: ''
     });
 
+    const [isChecking, setIsChecking] = useState(true); // État de vérification
     //   const [loading, setLoading] = useState(false);
+
+    const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
+
+    // Vérification automatique du token existant
+    useEffect(() => {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            setIsChecking(false);
+            return;
+        }
+
+        const verifyToken = async () => {
+            try {
+                const response = await fetch(`${API_URL}/api/user/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    // Mettre à jour localStorage avec les données fraîches
+                    localStorage.setItem('username', result.user.username);
+                    localStorage.setItem('freeChipsAmount', result.user.freeChipsAmount?.toString() ?? '0');
+                    showToast('Reconnexion automatique', 'success');
+                    navigate('/lobby');
+                } else {
+                    // Token invalide ou expiré
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('username');
+                    localStorage.removeItem('freeChipsAmount');
+                }
+            } catch (err) {
+                console.error('Erreur lors de la vérification du token', err);
+            } finally {
+                setIsChecking(false);
+            }
+        };
+
+        verifyToken();
+    }, [navigate, API_URL]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -42,12 +80,13 @@ const Login: React.FC = () => {
                     localStorage.setItem('freeChipsAmount', result.user.freeChipsAmount);
                 }
 
+                showToast("Connexion reussie !", "success");
+
                 setCredentials({ username: '', password: '' });
 
                 //   setLoading(false);
                 navigate("/lobby");
 
-                showToast("Connexion reussie !", "success");
 
             } else {
 
@@ -65,6 +104,15 @@ const Login: React.FC = () => {
             //   setLoading(false);
         }
     };
+
+    // Pendant la vérification, affichez un loader
+    if (isChecking) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-green-gradient">
+                <div className="text-white text-xl">Vérification en cours...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen py-12 px-2 sm:px-6 lg:px-8 bg-green-gradient font-suse">

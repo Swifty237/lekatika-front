@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 interface NewTatamiDialogProps {
     open: boolean;
-    onConfirm: (amount: number) => void;
+    onConfirm: (privateTatami: boolean, realMoney: boolean, bet: string) => void;
     onCancel: () => void;
 }
 
@@ -23,6 +23,7 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
     onCancel,
 }) => {
 
+    const [isPrivate, setIsPrivate] = useState<boolean>(false);
     const [isRealMoney, setIsRealMoney] = useState(false);
     const [selectedBet, setSelectedBet] = useState<string>('0');
 
@@ -30,7 +31,9 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
         setSelectedBet(value);
     };
 
-    const handleConfirm = () => onConfirm;
+    const handleConfirm = (privateTatami: boolean, realMoney: boolean, bet: string) => {
+        onConfirm(privateTatami, realMoney, bet)
+    };
 
 
     return (
@@ -48,6 +51,23 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
                 </DialogHeader>
 
                 <div className="grid grid-cols-2 gap-2 p-2">
+
+                    <label htmlFor="private" className="text-white">
+                        Partie privée ?
+                    </label>
+                    <div className="flex items-center border rounded-xl py-1 px-2 w-[67%]">
+                        {/* Oui s'affiche uniquement si isRealMoney est vrai */}
+                        {isPrivate && <span className="ms-2">Oui</span>}
+                        <Switch
+                            id="private"
+                            checked={isPrivate}
+                            onCheckedChange={setIsPrivate}
+                            className="data-[state=checked]:bg-[#0FAC71] bg-white mx-3"
+                        />
+                        {/* Non s'affiche uniquement si isRealMoney est faux */}
+                        {!isPrivate && <span>Non</span>}
+                    </div>
+
                     <label htmlFor="tatami-type" className="text-white">
                         Argent réel ?
                     </label>
@@ -65,12 +85,15 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
                         {!isRealMoney && <span>Non</span>}
                     </div>
 
+                    <span className="text-[12px] italic col-span-2 mb-2">( Le jeu en argent réel est désactivé pour le moment )</span>
+
+
                     <label htmlFor="tatami-type" className="text-white">
                         Coût combien ?
                     </label>
 
                     <Select onValueChange={handleBetChange} value={selectedBet}>
-                        <SelectTrigger className="w-[67%] shadow-lg">
+                        <SelectTrigger className="w-[67%] shadow-lg text-white">
                             <SelectValue placeholder="25 chips" />
                         </SelectTrigger>
                         <SelectContent className="text-white bg-[#0FAC71] shadow-lg">
@@ -89,7 +112,7 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
                     </Button>
 
                     <Button
-                        onClick={handleConfirm}
+                        onClick={() => handleConfirm(isPrivate, isRealMoney, selectedBet)}
                         // disabled={!amount || parseInt(amount, 10) <= 0 || parseInt(amount, 10) > maxAdd}
                         className="border border-white hover:bg-[#0FAC71] hover:border-[#0FAC71]"
                     >
