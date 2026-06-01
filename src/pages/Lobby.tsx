@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { ChevronLeft, ChevronRight, SquareArrowOutUpRight } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import NewTatamiDialog from '@/components/NewTatamiDialog';
 import { showToast } from '@/components/CustomToast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -37,7 +38,6 @@ const Lobby: React.FC = () => {
     // const startIndexNonTraites = (currentPageNonTraites - 1) * ITEMS_PER_PAGE;
     // const paginatedNonArchives = devisNonArchives.slice(startIndexNonTraites, startIndexNonTraites + ITEMS_PER_PAGE);
 
-
     const fetchTables = async () => {
         const token = localStorage.getItem('authToken');
         if (!token) return;
@@ -64,6 +64,13 @@ const Lobby: React.FC = () => {
             return;
         }
 
+        // Ouvrir un nouvel onglet vide immédiatement
+        const newTab = window.open('about:blank', '_blank');
+        if (!newTab) {
+            showToast("Impossible d'ouvrir un nouvel onglet, vérifiez votre bloqueur de popups", "error");
+            return;
+        }
+
         try {
             const response = await fetch(`${API_URL}/api/join/${tableId}`, {
                 method: 'POST',
@@ -76,20 +83,33 @@ const Lobby: React.FC = () => {
             const result = await response.json();
 
             if (response.ok) {
-                // Stocker l'ID de la table pour GameProgress
                 localStorage.setItem('currentTableId', result.table.id);
-                showToast("Vous avez rejoint le tatami !", "success");
-                navigate('/game-progress');
+                fetchTables(); // rafraîchir la liste des tables
+
+                newTab.location.href = '/game-progress';
             } else {
                 showToast(result.error || "Impossible de rejoindre le tatami", "error");
+                newTab.close(); // fermer l'onglet vide
             }
         } catch (err) {
             console.error(err);
             showToast("Erreur réseau", "error");
+            newTab.close();
         }
     };
 
     useEffect(() => {
+        const handleStorageChange = (event: StorageEvent) => {
+            if (event.key === 'tablesUpdate') {
+                fetchTables(); // Rafraîchir la liste des tatamis
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchTables();
     }, []);
 
@@ -131,23 +151,29 @@ const Lobby: React.FC = () => {
         fetchUserData();
     }, [location, navigate]);
 
-    const handleNewTatami = async (privateTatami: boolean, realMoney: boolean, bet: string) => {
 
+    const handleNewTatami = async (privateTatami: boolean, realMoney: boolean, bet: string) => {
         const tatamiName = generateTatamiName();
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            navigate('/login');
+            return;
+        }
+
+        const newTab = window.open('about:blank', '_blank');
+        if (!newTab) {
+            showToast("Impossible d'ouvrir un nouvel onglet", "error");
+            return;
+        }
+
+        setNewTatamiOpen(false)
 
         try {
-            const token = localStorage.getItem('authToken');
-
-            if (!token) {
-                navigate('/login');
-                return;
-            }
-
             const response = await fetch(`${API_URL}/api/tables`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
-                    name: tatamiName,           // ← ajouté
+                    name: tatamiName,
                     is_private: privateTatami,
                     is_real_money: realMoney,
                     bet: parseInt(bet, 10)
@@ -157,17 +183,20 @@ const Lobby: React.FC = () => {
             const result = await response.json();
 
             if (response.ok) {
-                // Stocker l'ID de la table pour le GameProgress
                 localStorage.setItem('currentTableId', result.table.id);
-                navigate('/game-progress');
+                // Rafraîchir la liste des tables dans le lobby
+                await fetchTables(); // attendre la mise à jour
+                newTab.location.href = '/game-progress';
             } else {
                 showToast(result.error || "Erreur lors de la création du tatami", "error");
+                newTab.close();
             }
         } catch (err) {
             console.error(err);
             showToast("Erreur réseau", "error");
+            newTab.close();
         }
-    }
+    };
 
     const switchAttribut = (table: Tatami) => {
         switch (activeColumn) {
@@ -185,6 +214,27 @@ const Lobby: React.FC = () => {
                 return "";
         }
     };
+
+    useEffect(() => {
+        // 1. Créer la connexion WebSocket
+        const ws = new WebSocket('ws://localhost:8080/ws');
+
+        // 2. Écouter les messages du serveur
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'RELOAD_TABLES') {
+                // 3. Mettre à jour la liste des tatamis
+                fetchTables();
+
+            }
+        };
+
+        // 4. Nettoyer la connexion à la fermeture du composant
+        return () => {
+            ws.close();
+        };
+    }, []); // Dépendances vides pour initialisation unique
+
 
     return (
         <MainLayout>
@@ -234,9 +284,9 @@ const Lobby: React.FC = () => {
                                 <span>N'hésite pas à ouvrir un nouveau tatami, ça fait venir les joueurs <span className="shadow-xl rounded-full text-lg">😉</span></span>
                             </div>
                         ) : (
-                            <>
+                            <div className="shadow-xl">
                                 {/* <Table className="hidden lg:table w-full border border-gray-300 shadow-xl"> */}
-                                <Table className="hidden lg:table border border-gray-300 shadow-xl">
+                                <Table className="hidden lg:table border border-gray-300">
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead scope="col" className="border px-6 py-3">Nom</TableHead>
@@ -257,12 +307,18 @@ const Lobby: React.FC = () => {
                                                 </TableCell>
                                                 <TableCell className="px-6 py-4">{table.bet} chips</TableCell>
                                                 <TableCell className="px-6 py-4">
-                                                    <button
-                                                        onClick={() => handleJoinTable(table.id)}
-                                                        className="text-blue-600 hover:text-blue-800 font-medium"
-                                                    >
-                                                        Rejoindre
-                                                    </button>
+                                                    {table.players && table.players.includes(userData?.id) ? (
+                                                        <button disabled className="text-gray-400 font-medium cursor-not-allowed">
+                                                            Rejoint
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleJoinTable(table.id)}
+                                                            className="text-blue-600 hover:text-blue-800 font-medium"
+                                                        >
+                                                            Rejoindre
+                                                        </button>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -311,12 +367,18 @@ const Lobby: React.FC = () => {
                                                     </TableCell>
 
                                                     <TableCell className="text-center">
-                                                        <button
-                                                            onClick={() => handleJoinTable(row.id)}
-                                                            className="text-blue-600 hover:text-blue-800 font-medium"
-                                                        >
-                                                            Rejoindre
-                                                        </button>
+                                                        {row.players && row.players.includes(userData?.id) ? (
+                                                            <button disabled className="text-gray-400 font-medium cursor-not-allowed">
+                                                                Rejoint
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleJoinTable(row.id)}
+                                                                className="text-blue-600 hover:text-blue-800 font-medium"
+                                                            >
+                                                                Rejoindre
+                                                            </button>
+                                                        )}
                                                     </TableCell>
                                                 </TableRow>
                                             )
@@ -324,7 +386,7 @@ const Lobby: React.FC = () => {
                                         </TableBody>
                                     </Table>
                                 </div>
-                            </>
+                            </div>
                         )}
                     </div>
                 </div>

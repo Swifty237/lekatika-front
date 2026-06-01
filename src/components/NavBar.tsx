@@ -41,6 +41,7 @@ const Navbar: React.FC = () => {
         const storedfreeChipsAmount = localStorage.getItem('freeChipsAmount');
 
         if (storedUsername) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setUsername(storedUsername);
         } else {
             setUsername('');
@@ -54,10 +55,27 @@ const Navbar: React.FC = () => {
     }, [location]); // se met à jour quand la route change (ex: après login redirige vers /lobby)
 
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        const token = localStorage.getItem('authToken');
+        const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
+
+        if (token) {
+            try {
+                await fetch(`${API_URL}/api/logout`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (err) {
+                console.error("Erreur lors de la déconnexion côté serveur", err);
+            }
+        }
+
+        // Nettoyage local
         localStorage.removeItem('authToken');
         localStorage.removeItem('username');
         localStorage.removeItem('freeChipsAmount');
+        localStorage.removeItem('currentTatami');
+        localStorage.removeItem('currentTableId');
         navigate('/login');
     };
 

@@ -25,7 +25,7 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
 
     const [isPrivate, setIsPrivate] = useState<boolean>(false);
     const [isRealMoney, setIsRealMoney] = useState(false);
-    const [selectedBet, setSelectedBet] = useState<string>('0');
+    const [selectedBet, setSelectedBet] = useState<string>("25");
 
     const handleBetChange = (value: string) => {
         setSelectedBet(value);

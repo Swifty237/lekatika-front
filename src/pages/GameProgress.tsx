@@ -1,52 +1,83 @@
 import { MessageCircle, Pause, SquareArrowRightExit } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 const GameProgress: React.FC = () => {
     const [tatami, setTatami] = useState<unknown>(null);
-    const navigate = useNavigate();
+    const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
 
-    const handleLeaveTatami = () => {
-        localStorage.removeItem('currentTatami');
-        localStorage.removeItem('currentTableId');
-        navigate('/lobby');
+    // Fonction centrale pour quitter la table
+    const performLeave = async () => {
+        const token = localStorage.getItem('authToken');
+        const tableId = localStorage.getItem('currentTableId');
+        if (!token || !tableId) return;
+
+        try {
+            await fetch(`${API_URL}/api/tables/${tableId}/leave`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        } catch (err) {
+            console.error("Erreur réseau lors du départ:", err);
+        } finally {
+            localStorage.removeItem('currentTatami');
+            localStorage.removeItem('currentTableId');
+            localStorage.setItem('tablesUpdate', Date.now().toString());
+        }
     };
 
+    // Appelée par le bouton "Quitter"
+    const handleLeaveTatami = async () => {
+        await performLeave();
+        window.close(); // ferme l'onglet après la requête
+    };
+
+    // Gérer la fermeture non contrôlée (croix de l'onglet, rafraîchissement)
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            const token = localStorage.getItem('authToken');
+            const tableId = localStorage.getItem('currentTableId');
+            if (!token || !tableId) return;
+            // Requête asynchrone avec keepalive pour qu'elle soit envoyée même si l'onglet se ferme
+            fetch(`${API_URL}/api/tables/${tableId}/leave`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` },
+                keepalive: true
+            }).catch(console.error);
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, []);
+
+    // Chargement initial de la table
     useEffect(() => {
         const fetchTable = async () => {
-            const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
-
             const tableId = localStorage.getItem('currentTableId');
             const token = localStorage.getItem('authToken');
-
             if (!tableId || !token) {
-                navigate('/lobby');
+                window.close();
                 return;
             }
-
             try {
                 const response = await fetch(`${API_URL}/api/tables/${tableId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-
                 if (response.ok) {
                     const data = await response.json();
                     setTatami(data.table);
-                    // Optionnel : mettre à jour localStorage pour usage ultérieur
                     localStorage.setItem('currentTatami', JSON.stringify(data.table));
                 } else {
-                    navigate('/lobby');
+                    window.close();
                 }
             } catch (err) {
                 console.error(err);
-                navigate('/lobby');
+                window.close();
             }
         };
         fetchTable();
-    }, [navigate]);
+    }, []);
 
     if (!tatami) {
-        return <div className="text-white text-center mt-20">Chargement...</div>;
+        return <div className="text-center mt-20">Chargement...</div>;
     }
 
     return (
