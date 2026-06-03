@@ -35,7 +35,6 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
         onConfirm(privateTatami, realMoney, bet)
     };
 
-
     return (
         <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
             <DialogContent className="max-w-sm border border-white text-white bg-[#2c5036]">
@@ -107,14 +106,14 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
 
 
                 <DialogFooter className="flex justify-end gap-2 mt-4">
-                    <Button className="border border-white hover:bg-[#0FAC71] hover:border-[#0FAC71]" onClick={onCancel}>
+                    <Button className="border bg-white text-[#0FAC71] hover:text-white hover:bg-[#0FAC71] hover:border-[#0FAC71] shadow-xl" onClick={onCancel}>
                         Annuler
                     </Button>
 
                     <Button
                         onClick={() => handleConfirm(isPrivate, isRealMoney, selectedBet)}
                         // disabled={!amount || parseInt(amount, 10) <= 0 || parseInt(amount, 10) > maxAdd}
-                        className="border border-white hover:bg-[#0FAC71] hover:border-[#0FAC71]"
+                        className="border border-white hover:bg-[#0FAC71] hover:border-[#0FAC71] shadow-xl"
                     >
                         Créer
                     </Button>

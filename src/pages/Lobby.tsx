@@ -205,7 +205,7 @@ const Lobby: React.FC = () => {
             case 1:
                 return table.type ?
                     <span className="bg-red-100 text-red-800 font-medium px-2.5 py-0.5 rounded">Privé</span> :
-                    <span className="bg-green-100 text-green-800 font-medium px-2.5 py-0.5 rounded">Public</span>;
+                    <span className="bg-green-100 text-green-800 font-medium px-2.5 py-0.5 rounded">-- Ouvert au publique --</span>;
             case 2:
                 return table.bet + " chips";
             case 3:
@@ -225,7 +225,6 @@ const Lobby: React.FC = () => {
             if (data.type === 'RELOAD_TABLES') {
                 // 3. Mettre à jour la liste des tatamis
                 fetchTables();
-
             }
         };
 
@@ -297,12 +296,12 @@ const Lobby: React.FC = () => {
                                     </TableHeader>
                                     <TableBody>
                                         {tables.map((table) => (
-                                            <TableRow key={table.id} className="bg-white border-b hover:bg-gray-50">
+                                            <TableRow key={table.id} className={`border-b ${table.isPrivate ? "bg-red-100" : "bg-green-100"}`}>
                                                 <TableCell className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{table.name}</TableCell>
                                                 <TableCell className="px-6 py-4">
                                                     {table.isPrivate ?
-                                                        <span className="bg-red-100 text-red-800 font-medium px-2.5 py-0.5 rounded">Privé</span> :
-                                                        <span className="bg-green-100 text-green-800 font-medium px-2.5 py-0.5 rounded">Public</span>
+                                                        <span className="bg-red-100 text-red-800 font-medium px-2.5 py-0.5 rounded">-- Privé --</span> :
+                                                        <span className="text-green-800 font-medium px-2.5 py-0.5 rounded">-- Ouvert au publique --</span>
                                                     }
                                                 </TableCell>
                                                 <TableCell className="px-6 py-4">{table.bet} chips</TableCell>
@@ -361,7 +360,7 @@ const Lobby: React.FC = () => {
                                         <TableBody>
 
                                             {tables.map((row) => (
-                                                <TableRow key={row._id}>
+                                                <TableRow key={row._id} className={`border-b ${row.isPrivate ? "bg-red-100" : "bg-green-100"}`}>
                                                     <TableCell>
                                                         {switchAttribut(row) || "-"}
                                                     </TableCell>

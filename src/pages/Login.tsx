@@ -21,6 +21,7 @@ const Login: React.FC = () => {
     useEffect(() => {
         const token = localStorage.getItem('authToken');
         if (!token) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setIsChecking(false);
             return;
         }

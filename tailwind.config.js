@@ -4,6 +4,12 @@ module.exports = {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      // Nouveau breakpoint personnalisé
+      screens: {
+        '2lg': '1200px',   // ou 'custom': '1200px'
+        '2md': '900px',
+        '2sm': '800px',
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

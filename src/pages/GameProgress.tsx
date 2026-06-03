@@ -1,9 +1,27 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+import Seat from '@/components/Seat';
 import { MessageCircle, Pause, SquareArrowRightExit } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 const GameProgress: React.FC = () => {
     const [tatami, setTatami] = useState<unknown>(null);
+    const [isHeightAbove1200, setIsHeightAbove1200] = useState(false);
+    const [isHeightAbove800, setIsHeightAbove800] = useState(false);
+    const [isHeightAbove640, setIsHeightAbove640] = useState(false);
     const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
+
+    // Détection de la hauteur de l'écran
+    useEffect(() => {
+        const checkHeight = () => {
+            const height = window.innerHeight;
+            setIsHeightAbove800(height > 800);
+            setIsHeightAbove640(height > 640);
+            setIsHeightAbove1200(height > 1200);
+        };
+        checkHeight();
+        window.addEventListener('resize', checkHeight);
+        return () => window.removeEventListener('resize', checkHeight);
+    }, []);
 
     // Fonction centrale pour quitter la table
     const performLeave = async () => {
@@ -28,7 +46,7 @@ const GameProgress: React.FC = () => {
     // Appelée par le bouton "Quitter"
     const handleLeaveTatami = async () => {
         await performLeave();
-        window.close(); // ferme l'onglet après la requête
+        window.close();
     };
 
     // Gérer la fermeture non contrôlée (croix de l'onglet, rafraîchissement)
@@ -37,7 +55,6 @@ const GameProgress: React.FC = () => {
             const token = localStorage.getItem('authToken');
             const tableId = localStorage.getItem('currentTableId');
             if (!token || !tableId) return;
-            // Requête asynchrone avec keepalive pour qu'elle soit envoyée même si l'onglet se ferme
             fetch(`${API_URL}/api/tables/${tableId}/leave`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` },
@@ -76,57 +93,79 @@ const GameProgress: React.FC = () => {
         fetchTable();
     }, []);
 
+    // Fonction pour déterminer la classe de hauteur du conteneur
+    const getContainerHeightClass = () => {
+        if (isHeightAbove1200) return 'h-[65em]';
+        if (isHeightAbove800) return 'h-[45em]';
+        if (isHeightAbove640) return 'h-[30em]';
+        return 'h-[25em]';
+    };
+
+    const getContainerAnotherHeightClass = () => {
+        if (isHeightAbove1200) return 'h-[65em]';
+        if (isHeightAbove800) return 'h-[45em]';
+        if (isHeightAbove640) return 'h-[38em]';
+        return 'h-[28em]';
+    };
+
     if (!tatami) {
         return <div className="text-center mt-20">Chargement...</div>;
     }
 
     return (
-        // Conteneur principal : fond dégradé vertical, occupation totale, colonne flex
-        <div className="min-h-screen flex flex-col bg-green-gradient font-suse">
+        <div className="min-h-screen flex flex-col bg-green-gradient font-suse overflow-y-auto justify-between">
+            <div className="mb-14">
+                <div className={`${getContainerHeightClass()}`}>
+                    <div className={`flex bg-green-gradient items-center justify-center m-2 min-w-[55em] overflow-auto ${getContainerAnotherHeightClass()}`}>
+                        {isHeightAbove1200 &&
+                            // Version pour hauteur > 1200px
+                            <div className="relative w-[22em] 2sm:w-[33em] 2md:w-[37em] 2lg:w-[57em] h-[37em] 2sm:h-[33em] 2md:h-[37em] rounded-xl shadow-2xl">
+                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
+                                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
+                                <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
+                                <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
+                                <div className="flex items-center justify-center h-full text-white text-lg font-bold capitalize">{tatami.name}</div>
+                            </div>
+                        }
 
-            {/* Zone centrale qui pousse la barre d'actions vers le bas */}
-            <div className="flex-1 flex items-center justify-center p-4">
+                        {isHeightAbove800 && !isHeightAbove1200 &&
+                            // Version pour hauteur > 800px
+                            <div className="relative w-[37em] 2lg:w-[57em] h-[28em] rounded-xl shadow-2xl">
+                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
+                                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
+                                <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
+                                <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
+                                <div className="flex items-center justify-center h-full text-white text-lg font-bold capitalize">{tatami.name}</div>
+                            </div>
+                        }
 
-                {/* Carré (table de jeu) : carré parfait (w-96 h-96 sur desktop, responsive) */}
-                <div className="relative w-96 h-96 md:w-[37em] md:h-[37em] rounded-xl shadow-2xl">
+                        {isHeightAbove640 && !isHeightAbove800 &&
+                            // Version pour hauteur  800px
+                            <div className="relative w-[22em] 2sm:w-[33em] 2md:w-[37em] 2lg:w-[57em] h-[26em] rounded-xl shadow-2xl">
+                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
+                                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
+                                <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
+                                <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
+                                <div className="flex items-center justify-center h-full text-white text-lg font-bold capitalize">{tatami.name}</div>
+                            </div>
+                        }
 
-                    {/* Cercle du haut (siège joueur 1) : centré horizontalement, en haut du carré */}
-                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
-                        <div className="w-20 h-20 bg-[#0FAC71] rounded-full border-2 border-white shadow-md flex items-center justify-center text-white font-bold">
-                            1
-                        </div>
-                    </div>
-
-                    {/* Cercle du bas (siège joueur 3) */}
-                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
-                        <div className="w-20 h-20 bg-[#0FAC71] rounded-full border-2 border-white shadow-md flex items-center justify-center text-white font-bold">
-                            3
-                        </div>
-                    </div>
-
-                    {/* Cercle de gauche (siège joueur 4) */}
-                    <div className="absolute top-1/2 -left-6 transform -translate-y-1/2">
-                        <div className="w-20 h-20 bg-[#0FAC71] rounded-full border-2 border-white shadow-md flex items-center justify-center text-white font-bold">
-                            4
-                        </div>
-                    </div>
-
-                    {/* Cercle de droite (siège joueur 2) */}
-                    <div className="absolute top-1/2 -right-6 transform -translate-y-1/2">
-                        <div className="w-20 h-20 bg-[#0FAC71] rounded-full border-2 border-white shadow-md flex items-center justify-center text-white font-bold">
-                            2
-                        </div>
-                    </div>
-
-                    {/* Optionnel : un motif ou texte au centre de la table */}
-                    <div className="flex items-center justify-center h-full text-white text-lg font-bold">
-                        Tatami-KD2026
+                        {!isHeightAbove640 &&
+                            // Version pour hauteur  800px
+                            <div className="relative w-[22em] 2sm:w-[33em] 2md:w-[37em] 2lg:w-[57em] h-[25em] rounded-xl shadow-2xl">
+                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
+                                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
+                                <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
+                                <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
+                                <div className="flex items-center justify-center h-full text-white text-lg font-bold capitalize">{tatami.name}</div>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
 
-            {/* Barre d'actions en bas (fixée en bas, mais dans le flux flex grâce à mt-auto) */}
-            <div className="backdrop-blur-sm py-4 px-6 flex justify-center gap-4 flex-wrap shadow-2xl rounded-xl self-center mb-8">
+            {/* Barre d'actions en bas */}
+            <div className="backdrop-blur-sm py-4 px-6 flex justify-center gap-4 flex-wrap shadow-2xl rounded-xl self-center">
                 <button className="hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-full transition duration-200 shadow-lg">
                     <MessageCircle className="w-4 h-4" />
                 </button>
@@ -142,5 +181,4 @@ const GameProgress: React.FC = () => {
         </div>
     );
 };
-
-export default GameProgress;
+export default GameProgress; 
