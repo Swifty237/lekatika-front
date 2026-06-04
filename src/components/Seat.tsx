@@ -6,9 +6,9 @@ interface SeatProps {
 }
 
 const Seat: React.FC<SeatProps> = ({ seatID }) => {
-    const isPlayerSeated = true; // À remplacer par la vraie condition
+    const isPlayerSeated = false; // À remplacer par la vraie condition
     const isEmptySeat = false
-    const isEmptySeatWithButton = false
+    const isEmptySeatWithButton = true
 
     // const isCardsVisible = false
     const isSeatThree = seatID === '3';
@@ -18,7 +18,7 @@ const Seat: React.FC<SeatProps> = ({ seatID }) => {
         return (
             <div
                 id={seatID}
-                className="w-20 h-20 bg-[#0FAC71] rounded-full shadow-xl flex items-center justify-center text-white font-bold"
+                className="w-20 h-20 bg-green-gradient rounded-full shadow-xl flex items-center justify-center text-white font-bold"
             >
                 <Button className="bg-white text-[#0FAC71] hover:text-white hover:bg-[#0FAC71] rounded-xl p-4 shadow-xl">
                     S'asseoir
@@ -51,16 +51,15 @@ const Seat: React.FC<SeatProps> = ({ seatID }) => {
 
                 {isSeatThree &&
                     <div className="relative bottom-[182%]">
-                        <p className="relative transform -translate-y-[67%] text-white text-center p-2 w-[150px] bg-[#0FAC71] shadow-md rounded-full">Mise: 100 chips</p>
-
                         {/* cartes visibles siège 3*/}
                         <div className="flex transform -translate-x-[128%] -translate-y-[40%] shadow-xl">
-                            <img src="img/cards/s10.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px]" alt="" />
-                            <img src="img/cards/s9.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px]" alt="" />
-                            <img src="img/cards/s3.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px]" alt="" />
-                            <img src="img/cards/h10.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px]" alt="" />
-                            <img src="img/cards/h9.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px]" alt="" />
+                            <img src="img/cards/s10.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
+                            <img src="img/cards/s9.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
+                            <img src="img/cards/s3.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
+                            <img src="img/cards/h10.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
+                            <img src="img/cards/h9.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
                         </div>
+                        <p className="relative transform -translate-y-[20%] text-white text-center py-2 w-[150px] bg-[#0FAC71] shadow-md rounded-full">Mise: 100 chips</p>
                     </div>
                 }
 
@@ -89,21 +88,21 @@ const Seat: React.FC<SeatProps> = ({ seatID }) => {
                 </div>
 
                 {/* Nom d'utilisateur sous l'avatar */}
-                <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-white font-bold whitespace-nowrap capitalize">
-                    username
+                <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-white font-bold whitespace-nowrap capitalize underline shadow-sm">
+                    username (1000 chips)
                 </span>
 
                 {!isSeatThree &&
                     <div className="relative top-[35%]">
                         {/* cartes visibles 1, 2, 4 */}
+                        <p className="relative transform -translate-y-[20%] text-white text-center py-2 w-[150px] bg-[#0FAC71] shadow-md rounded-full">Mise: 100 chips</p>
                         <div className="flex transform  shadow-md -translate-x-[128%]">
-                            <img src="img/cards/s10.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px]" alt="" />
-                            <img src="img/cards/s9.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px]" alt="" />
-                            <img src="img/cards/s3.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px]" alt="" />
-                            <img src="img/cards/h10.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px]" alt="" />
-                            <img src="img/cards/h9.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px]" alt="" />
+                            <img src="img/cards/s10.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
+                            <img src="img/cards/s9.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
+                            <img src="img/cards/s3.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
+                            <img src="img/cards/h10.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
+                            <img src="img/cards/h9.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
                         </div>
-                        <p className="text-white text-center p-2 w-[150px] bg-[#0FAC71] shadow-md rounded-full mt-4">Mise: 100 chips</p>
                     </div>
                 }
             </div>

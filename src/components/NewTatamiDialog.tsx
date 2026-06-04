@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 interface NewTatamiDialogProps {
     open: boolean;
-    onConfirm: (privateTatami: boolean, realMoney: boolean, bet: string) => void;
+    onConfirm: (privateTatami: boolean, realMoney: boolean, bet: string, paid33: boolean) => void;
     onCancel: () => void;
 }
 
@@ -25,14 +25,15 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
 
     const [isPrivate, setIsPrivate] = useState<boolean>(false);
     const [isRealMoney, setIsRealMoney] = useState(false);
+    const [is33Paid, setIs33Paid] = useState(false);
     const [selectedBet, setSelectedBet] = useState<string>("25");
 
     const handleBetChange = (value: string) => {
         setSelectedBet(value);
     };
 
-    const handleConfirm = (privateTatami: boolean, realMoney: boolean, bet: string) => {
-        onConfirm(privateTatami, realMoney, bet)
+    const handleConfirm = (privateTatami: boolean, realMoney: boolean, bet: string, paid33: boolean) => {
+        onConfirm(privateTatami, realMoney, bet, paid33)
     };
 
     return (
@@ -86,6 +87,22 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
 
                     <span className="text-[12px] italic col-span-2 mb-2">( Le jeu en argent réel est désactivé pour le moment )</span>
 
+                    <label htmlFor="paid-33" className="text-white">
+                        33 Payée ?
+                    </label>
+                    <div className="flex items-center border rounded-xl py-1 px-2 w-[67%]">
+                        {/* Oui s'affiche uniquement si isRealMoney est vrai */}
+                        {is33Paid && <span className="ms-2">Oui</span>}
+                        <Switch
+                            id="paid-33"
+                            checked={is33Paid}
+                            onCheckedChange={setIs33Paid}
+                            className="data-[state=checked]:bg-[#0FAC71] bg-white mx-3"
+                        />
+                        {/* Non s'affiche uniquement si isRealMoney est faux */}
+                        {!is33Paid && <span>Non</span>}
+                    </div>
+
 
                     <label htmlFor="tatami-type" className="text-white">
                         Coût combien ?
@@ -111,7 +128,7 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
                     </Button>
 
                     <Button
-                        onClick={() => handleConfirm(isPrivate, isRealMoney, selectedBet)}
+                        onClick={() => handleConfirm(isPrivate, isRealMoney, selectedBet, is33Paid)}
                         // disabled={!amount || parseInt(amount, 10) <= 0 || parseInt(amount, 10) > maxAdd}
                         className="border border-white hover:bg-[#0FAC71] hover:border-[#0FAC71] shadow-xl"
                     >

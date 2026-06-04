@@ -1,10 +1,11 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import Seat from '@/components/Seat';
+import type TatamiProps from '@/types/Tatami';
 import { MessageCircle, Pause, SquareArrowRightExit } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 const GameProgress: React.FC = () => {
-    const [tatami, setTatami] = useState<unknown>(null);
+    const [tatami, setTatami] = useState<TatamiProps>();
     const [isHeightAbove1200, setIsHeightAbove1200] = useState(false);
     const [isHeightAbove800, setIsHeightAbove800] = useState(false);
     const [isHeightAbove640, setIsHeightAbove640] = useState(false);
@@ -45,6 +46,8 @@ const GameProgress: React.FC = () => {
 
     // Appelée par le bouton "Quitter"
     const handleLeaveTatami = async () => {
+        // Marqueur pour indiquer une sortie volontaire
+        sessionStorage.setItem('manualLeave', 'true');
         await performLeave();
         window.close();
     };
@@ -54,12 +57,18 @@ const GameProgress: React.FC = () => {
         const handleBeforeUnload = () => {
             const token = localStorage.getItem('authToken');
             const tableId = localStorage.getItem('currentTableId');
-            if (!token || !tableId) return;
-            fetch(`${API_URL}/api/tables/${tableId}/leave`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` },
-                keepalive: true
-            }).catch(console.error);
+
+            const isManualLeave = sessionStorage.getItem('manualLeave');
+            if (isManualLeave) {
+                sessionStorage.removeItem('manualLeave');
+                if (!token || !tableId) return;
+                fetch(`${API_URL}/api/tables/${tableId}/leave`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    keepalive: true
+                }).catch(console.error);
+                return;
+            }
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -113,51 +122,73 @@ const GameProgress: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen flex flex-col bg-green-gradient font-suse overflow-y-auto justify-between">
+        <div className="min-h-screen grid grid-cols-1 bg-green-gradient font-suse overflow-y-auto justify-between">
             <div className="mb-14">
                 <div className={`${getContainerHeightClass()}`}>
-                    <div className={`flex bg-green-gradient items-center justify-center m-2 min-w-[55em] overflow-auto ${getContainerAnotherHeightClass()}`}>
+                    <div className={`flex items-center justify-center m-2 min-w-[55em] overflow-auto ${getContainerAnotherHeightClass()}`}>
                         {isHeightAbove1200 &&
                             // Version pour hauteur > 1200px
-                            <div className="relative w-[22em] 2sm:w-[33em] 2md:w-[37em] 2lg:w-[57em] h-[37em] 2sm:h-[33em] 2md:h-[37em] rounded-xl shadow-2xl">
-                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
-                                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
-                                <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
-                                <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
-                                <div className="flex items-center justify-center h-full text-white text-lg font-bold capitalize">{tatami.name}</div>
+                            <div className="bg-green-gradient p-[2px] rounded-xl shadow-lg">
+                                <div className="relative bg-green-gradient w-[35em] 2md:w-[37em] 2lg:w-[57em] h-[37em] 2sm:h-[33em] 2md:h-[37em] rounded-xl shadow-xl">
+                                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
+                                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
+                                    <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
+                                    <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
+                                    <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
+                                        <p className="text-sm pb-2">{tatami.name}</p>
+                                        <p>Pot : 0 Chips</p>
+                                    </div>
+                                </div>
                             </div>
+
                         }
 
                         {isHeightAbove800 && !isHeightAbove1200 &&
                             // Version pour hauteur > 800px
-                            <div className="relative w-[37em] 2lg:w-[57em] h-[28em] rounded-xl shadow-2xl">
-                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
-                                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
-                                <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
-                                <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
-                                <div className="flex items-center justify-center h-full text-white text-lg font-bold capitalize">{tatami.name}</div>
+                            <div className="bg-green-gradient p-[2px] rounded-xl shadow-lg">
+                                <div className="relative bg-green-gradient w-[37em] 2lg:w-[57em] h-[28em] rounded-xl shadow-xl">
+                                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
+                                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
+                                    <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
+                                    <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
+                                    <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
+                                        <p className="text-sm pb-2">{tatami.name}</p>
+                                        <p>Pot : 0 Chips</p>
+                                    </div>
+                                </div>
                             </div>
                         }
 
                         {isHeightAbove640 && !isHeightAbove800 &&
                             // Version pour hauteur  800px
-                            <div className="relative w-[22em] 2sm:w-[33em] 2md:w-[37em] 2lg:w-[57em] h-[26em] rounded-xl shadow-2xl">
-                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
-                                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
-                                <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
-                                <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
-                                <div className="flex items-center justify-center h-full text-white text-lg font-bold capitalize">{tatami.name}</div>
+                            <div className="bg-green-gradient p-[2px] rounded-xl shadow-xl">
+                                <div className="relative bg-green-gradient w-[35em] 2md:w-[37em] 2lg:w-[57em] h-[26em] rounded-xl shadow-xl">
+                                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
+                                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
+                                    <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
+                                    <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
+                                    <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
+                                        <p className="text-sm pb-2">{tatami.name}</p>
+                                        <p>Pot : 0 Chips</p>
+                                    </div>
+                                </div>
                             </div>
+
                         }
 
                         {!isHeightAbove640 &&
                             // Version pour hauteur  800px
-                            <div className="relative w-[22em] 2sm:w-[33em] 2md:w-[37em] 2lg:w-[57em] h-[25em] rounded-xl shadow-2xl">
-                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
-                                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
-                                <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
-                                <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
-                                <div className="flex items-center justify-center h-full text-white text-lg font-bold capitalize">{tatami.name}</div>
+                            <div className="bg-green-gradient p-[2px] rounded-xl shadow-lg">
+                                <div className="relative bg-green-gradient w-[35em] 2md:w-[37em] 2lg:w-[57em] h-[25em] rounded-xl shadow-xl">
+                                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
+                                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
+                                    <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
+                                    <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
+                                    <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
+                                        <p className="text-sm pb-2">{tatami.name}</p>
+                                        <p>Pot : 0 Chips</p>
+                                    </div>
+                                </div>
                             </div>
                         }
                     </div>
@@ -165,18 +196,20 @@ const GameProgress: React.FC = () => {
             </div>
 
             {/* Barre d'actions en bas */}
-            <div className="backdrop-blur-sm py-4 px-6 flex justify-center gap-4 flex-wrap shadow-2xl rounded-xl self-center">
-                <button className="hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-full transition duration-200 shadow-lg">
-                    <MessageCircle className="w-4 h-4" />
-                </button>
-                <button className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                    <Pause className="w-4 h-4 me-2" />
-                    <span>Se mettre en pause</span>
-                </button>
-                <button onClick={handleLeaveTatami} className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                    <SquareArrowRightExit className="w-4 h-4 me-2" />
-                    <span>Quitter</span>
-                </button>
+            <div className="flex min-w-[55em]">
+                <div className="bg-green-gradient backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap shadow-xl rounded-xl mb-8 mt-14 mx-auto">
+                    <button className="hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-full transition duration-200 shadow-lg">
+                        <MessageCircle className="w-4 h-4" />
+                    </button>
+                    <button className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
+                        <Pause className="w-4 h-4 me-2" />
+                        <span>Se mettre en pause</span>
+                    </button>
+                    <button onClick={handleLeaveTatami} className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
+                        <SquareArrowRightExit className="w-4 h-4 me-2" />
+                        <span>Quitter</span>
+                    </button>
+                </div>
             </div>
         </div>
     );

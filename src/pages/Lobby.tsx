@@ -1,32 +1,28 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
-import { ChevronLeft, ChevronRight, SquareArrowOutUpRight } from 'lucide-react';
+import { Beer, ChevronLeft, ChevronRight, CircleDollarSign, DoorClosedLocked, DoorOpen, Play, SquareArrowOutUpRight, TriangleAlert } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import NewTatamiDialog from '@/components/NewTatamiDialog';
 import { showToast } from '@/components/CustomToast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import type TatamiProps from '@/types/Tatami';
+import type UserProps from '@/types/User';
 
-interface Tatami {
-    name: string;
-    type: boolean;
-    bet: string
-}
 
 const Lobby: React.FC = () => {
-
     const [username, setUsername] = useState<string>('');
     const [newTatamiOpen, setNewTatamiOpen] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [userData, setUserData] = useState<any>(null); // stocker toutes les infos
-    const [tables, setTables] = useState([]); // État pour stocker les tatamis
+    const [userData, setUserData] = useState<UserProps>(); // stocker toutes les infos
+    const [tables, setTables] = useState<TatamiProps[]>([]); // État pour stocker les tatamis
     const [activeColumn, setActiveColumn] = useState(0);
 
     const location = useLocation();
     const navigate = useNavigate();
 
-    const tableHeads = ["Nom", "Type", "Mise"];
+    const tableHeads = ["Nom", "Privé / Publique", "Avec la 33", "Mise"];
 
     const generateTatamiName = () => {
         return "tatami-" + Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -48,7 +44,18 @@ const Lobby: React.FC = () => {
             });
             if (response.ok) {
                 const data = await response.json();
-                setTables(data.tables);
+                // Transformer chaque table pour utiliser les noms frontend
+                const normalizedTables = data.tables.map((table: TatamiProps) => ({
+                    id: table.id,
+                    name: table.name,
+                    type: table.is_private,        // alias
+                    realMoney: table.is_real_money, // alias
+                    paid33: table.paid_33,          // alias
+                    bet: table.bet,
+                    players: table.players,
+                }));
+                setTables(normalizedTables);
+
             }
         } catch (error) {
             console.error("Erreur lors du chargement des tatamis:", error);
@@ -131,7 +138,7 @@ const Lobby: React.FC = () => {
                 });
                 if (response.ok) {
                     const result = await response.json();
-                    console.log(result.user);
+                    // console.log(result.user);
                     setUserData(result.user);
                     setUsername(result.user.username);
                     // Mettre à jour localStorage si besoin (freeChipsAmount, etc.)
@@ -152,7 +159,7 @@ const Lobby: React.FC = () => {
     }, [location, navigate]);
 
 
-    const handleNewTatami = async (privateTatami: boolean, realMoney: boolean, bet: string) => {
+    const handleNewTatami = async (privateTatami: boolean, realMoney: boolean, bet: string, paid33: boolean) => {
         const tatamiName = generateTatamiName();
         const token = localStorage.getItem('authToken');
         if (!token) {
@@ -176,7 +183,8 @@ const Lobby: React.FC = () => {
                     name: tatamiName,
                     is_private: privateTatami,
                     is_real_money: realMoney,
-                    bet: parseInt(bet, 10)
+                    bet: parseInt(bet, 10),
+                    paid_33: paid33,
                 })
             });
 
@@ -198,18 +206,34 @@ const Lobby: React.FC = () => {
         }
     };
 
-    const switchAttribut = (table: Tatami) => {
+    const switchAttribut = (table: TatamiProps) => {
         switch (activeColumn) {
-            case 0:
-                return table.name;
-            case 1:
-                return table.type ?
-                    <span className="bg-red-100 text-red-800 font-medium px-2.5 py-0.5 rounded">Privé</span> :
-                    <span className="bg-green-100 text-green-800 font-medium px-2.5 py-0.5 rounded">-- Ouvert au publique --</span>;
-            case 2:
-                return table.bet + " chips";
-            case 3:
+            case 0: return <span className="flex justify-center">{table.name}</span>;
+            case 1: return table.type ?
+                <span className="bg-yellow-100 text-yellow-800 px-2.5 py-0.5 rounded flex justify-center">Privé</span> :
+                <span className="bg-green-200 text-green-800 px-2.5 py-0.5 rounded flex justify-center">Publique</span>;
+            case 2: return table.paid33 ?
+                <span className="px-2.5 py-0.5 rounded flex justify-center">Oui</span> :
+                <span className="px-2.5 py-0.5 rounded flex justify-center">Non</span>;
+            case 3: return <span className="flex justify-center">{table.bet + " chips"}</span>;
+            case 4: return table.realMoney ?
+                <span className="bg-red-100 text-red-800 font-medium px-2.5 py-0.5 rounded flex justify-center">Oui</span> :
+                <span className="bg-green-200 text-green-800 font-medium px-2.5 py-0.5 rounded flex justify-center">Non</span>;
+            default:
                 return "";
+        }
+    };
+
+    const anotherSwitchAttribut = () => {
+        switch (activeColumn) {
+            case 0: return <div className="flex justify-center">{tableHeads[activeColumn]}</div>;
+            case 1: return <div className="flex justify-center">
+                <span className="flex items-center"><DoorClosedLocked className="h-4 w-4 me-1" /> Privé /</span>
+                <span className="flex items-center"><DoorOpen className="h-4 w-4 mx-1" /> Publique</span>
+            </div>;
+            case 2: return <div className="flex justify-center items-center"><Beer className="h-4 w-4 me-1" />{tableHeads[activeColumn]}</div>;
+            case 3: return <div className="flex justify-center items-center"><CircleDollarSign className="h-4 w-4 me-1" />{tableHeads[activeColumn]}</div>;
+            case 4: return <div className="flex justify-center items-center"><TriangleAlert className="h-4 w-4 me-1" />{tableHeads[activeColumn]}</div>
             default:
                 return "";
         }
@@ -251,7 +275,7 @@ const Lobby: React.FC = () => {
                     Tu peux rejoindre un tatami en cliquant sur un des liens si dessous ou bien en créer un nouveau pour t'amuser avec des amis.
                 </p>
 
-                <div className="lg:w-[55vw] pt-8 flex w-full justify-around items-center">
+                <div className="2lg:w-[55vw] lg:w-[75vw] pt-8 flex w-full justify-around items-center">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[40%]">
                         <label className="flex items-center gap-2 mb-4 lg:mb-0">
                             <input type="checkbox" checked disabled className="w-4 h-4 rounded focus:ring-[#0FAC71]" />
@@ -269,13 +293,7 @@ const Lobby: React.FC = () => {
                     </button>
                 </div>
 
-                {/* <div className="w-full flex flex-col justify-center items-center lg:w-[55vw] min-h-[30vh] bg-white mt-8 rounded-md text-black">
-                    <span>Oops ! il n'y a pas de tatami ouvert actuellement...</span>
-                    <span>N'hésite pas à ouvrir un nouveau tatami, ça fait venir les joueurs <span className="shadow-xl rounded-full text-lg">😉</span></span>
-                </div> */}
-
-
-                <div className="w-full flex flex-col justify-center items-center lg:w-[55vw] min-h-[30vh] bg-white mt-8 rounded-md text-black">
+                <div className="w-full flex flex-col justify-center items-center 2lg:w-[60vw] lg:w-[90vw] min-h-[30vh] bg-white mt-8 rounded-md text-black">
                     <div className="p-8 w-full overflow-x-auto">
                         {tables.length === 0 ? (
                             <div className="flex flex-col items-center">
@@ -285,35 +303,76 @@ const Lobby: React.FC = () => {
                         ) : (
                             <div className="shadow-xl">
                                 {/* <Table className="hidden lg:table w-full border border-gray-300 shadow-xl"> */}
-                                <Table className="hidden lg:table border border-gray-300">
+                                <Table className="hidden lg:table">
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead scope="col" className="border px-6 py-3">Nom</TableHead>
-                                            <TableHead scope="col" className="border px-6 py-3">Type</TableHead>
-                                            <TableHead scope="col" className="border px-6 py-3">Mise</TableHead>
-                                            <TableHead scope="col" className="border px-6 py-3">Action</TableHead>
+                                            <TableHead scope="col" className="border">
+                                                <p className="text-center">Nom</p>
+                                            </TableHead>
+                                            <TableHead scope="col" className="border">
+                                                <div className="flex justify-center">
+                                                    <span className="flex items-center"><DoorClosedLocked className="h-4 w-4 me-1" /> Privé /</span>
+                                                    <span className="flex items-center"><DoorOpen className="h-4 w-4 mx-1" /> Publique</span>
+                                                </div>
+                                            </TableHead>
+                                            <TableHead scope="col" className="border">
+                                                <div className="flex justify-center items-center">
+                                                    <Beer className="h-4 w-4 me-1" />Avec la 33
+                                                </div>
+                                            </TableHead>
+                                            <TableHead scope="col" className="border">
+                                                <div className="flex justify-center items-center">
+                                                    <CircleDollarSign className="h-4 w-4 me-1" />Mise
+                                                </div>
+                                            </TableHead>
+                                            <TableHead scope="col" className="border">
+                                                <div className="flex justify-center items-center">
+                                                    <TriangleAlert className="h-4 w-4 me-1" />Argent réel
+                                                </div>
+                                            </TableHead>
+                                            <TableHead scope="col" className="border">
+                                                <div className="flex justify-center items-center">
+                                                    <Play className="h-4 w-4 me-1" />Rejoindre
+                                                </div>
+                                            </TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {tables.map((table) => (
-                                            <TableRow key={table.id} className={`border-b ${table.isPrivate ? "bg-red-100" : "bg-green-100"}`}>
-                                                <TableCell className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{table.name}</TableCell>
+                                            <TableRow key={table.id} className="bg-green-100 border-gray-300">
+                                                <TableCell className="px-6 py-4  text-gray-900 whitespace-nowrap flex justify-center">
+                                                    {table.name}
+                                                </TableCell>
                                                 <TableCell className="px-6 py-4">
-                                                    {table.isPrivate ?
-                                                        <span className="bg-red-100 text-red-800 font-medium px-2.5 py-0.5 rounded">-- Privé --</span> :
-                                                        <span className="text-green-800 font-medium px-2.5 py-0.5 rounded">-- Ouvert au publique --</span>
+                                                    {table.type ?
+                                                        <span className="bg-yellow-100 text-yellow-800  px-2.5 py-0.5 rounded flex justify-center">Privé</span> :
+                                                        <span className="bg-green-200 text-green-800  px-2.5 py-0.5 rounded flex justify-center">Publique</span>
                                                     }
                                                 </TableCell>
-                                                <TableCell className="px-6 py-4">{table.bet} chips</TableCell>
                                                 <TableCell className="px-6 py-4">
-                                                    {table.players && table.players.includes(userData?.id) ? (
-                                                        <button disabled className="text-gray-400 font-medium cursor-not-allowed">
+                                                    {table.paid33 ?
+                                                        <span className="px-2.5 py-0.5 rounded flex justify-center"> Oui</span> :
+                                                        <span className="px-2.5 py-0.5 rounded flex justify-center"> Non</span>
+                                                    }
+                                                </TableCell>
+                                                <TableCell className="px-6 py-4">
+                                                    <span className="flex">{table.bet} chips</span>
+                                                </TableCell>
+                                                <TableCell className="px-6 py-4">
+                                                    {table.realMoney ?
+                                                        <span className="bg-red-100 text-red-800  px-2.5 py-0.5 rounded flex justify-center">Oui</span> :
+                                                        <span className="bg-green-200 text-green-800  px-2.5 py-0.5 rounded flex justify-center">Non</span>
+                                                    }
+                                                </TableCell>
+                                                <TableCell className="px-6 py-4">
+                                                    {table.players && table.players.includes(userData!.id) ? (
+                                                        <button disabled className="text-gray-400  cursor-not-allowed">
                                                             Rejoint
                                                         </button>
                                                     ) : (
                                                         <button
                                                             onClick={() => handleJoinTable(table.id)}
-                                                            className="text-blue-600 hover:text-blue-800 font-medium"
+                                                            className="text-blue-600 hover:text-blue-800 "
                                                         >
                                                             Rejoindre
                                                         </button>
@@ -347,11 +406,13 @@ const Lobby: React.FC = () => {
                                     <Table>
                                         <TableHeader>
                                             <TableRow className="bg-gray-100">
-                                                <TableHead className="border">{tableHeads[activeColumn]}</TableHead>
+                                                <TableHead className="border">
+                                                    {anotherSwitchAttribut()}
+                                                </TableHead>
                                                 <TableHead className="border">
                                                     <div className="flex flex-col items-center gap-2">
-                                                        <label className="text-xs my-2">
-                                                            Action
+                                                        <label className="my-2 flex items-center">
+                                                            <Play className="h-4 w-4 me-1" />Rejoindre
                                                         </label>
                                                     </div>
                                                 </TableHead>
@@ -360,20 +421,20 @@ const Lobby: React.FC = () => {
                                         <TableBody>
 
                                             {tables.map((row) => (
-                                                <TableRow key={row._id} className={`border-b ${row.isPrivate ? "bg-red-100" : "bg-green-100"}`}>
+                                                <TableRow key={row.id} className="bg-green-100 border-gray-300">
                                                     <TableCell>
                                                         {switchAttribut(row) || "-"}
                                                     </TableCell>
 
                                                     <TableCell className="text-center">
-                                                        {row.players && row.players.includes(userData?.id) ? (
-                                                            <button disabled className="text-gray-400 font-medium cursor-not-allowed">
+                                                        {row.players && row.players.includes(userData!.id) ? (
+                                                            <button disabled className="text-gray-400 cursor-not-allowed">
                                                                 Rejoint
                                                             </button>
                                                         ) : (
                                                             <button
                                                                 onClick={() => handleJoinTable(row.id)}
-                                                                className="text-blue-600 hover:text-blue-800 font-medium"
+                                                                className="text-blue-600 hover:text-blue-800"
                                                             >
                                                                 Rejoindre
                                                             </button>
