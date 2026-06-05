@@ -11,7 +11,16 @@ const GameProgress: React.FC = () => {
     const [isHeightAbove1200, setIsHeightAbove1200] = useState(false);
     const [isHeightAbove800, setIsHeightAbove800] = useState(false);
     const [isHeightAbove640, setIsHeightAbove640] = useState(false);
-    const [currentUser, setCurrentUser] = useState<{ id: number, username: string } | null>(null);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [currentUser, setCurrentUser] = useState<{ id: number; username: string } | null>(() => {
+        const userId = localStorage.getItem('userId');
+        const username = localStorage.getItem('username');
+        if (userId && username) {
+            return { id: parseInt(userId), username };
+        }
+        return null;
+    });
 
     const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
     const [searchParams] = useSearchParams();
@@ -123,14 +132,6 @@ const GameProgress: React.FC = () => {
         }
     }, [searchParams]);
 
-    useEffect(() => {
-        const userId = localStorage.getItem('userId');
-        const username = localStorage.getItem('username');
-        if (userId && username) {
-            setCurrentUser({ id: parseInt(userId), username });
-        }
-    }, []);
-
     const handleSit = async (seatNumber: number) => {
         const token = localStorage.getItem('authToken');
         const tableId = localStorage.getItem('currentTableId');
@@ -237,6 +238,8 @@ const GameProgress: React.FC = () => {
                                 chips={1000}
                                 onSit={showSitButton ? () => handleSit(seatNumber) : undefined}
                                 showCards={!!isCurrentUser}
+                                handCardCount={isOccupied ? 5 : 0}
+                                playedCardCount={isOccupied ? 5 : 0}
                             />
                         </div>
                     );

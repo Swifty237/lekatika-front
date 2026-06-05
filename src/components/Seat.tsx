@@ -9,6 +9,8 @@ interface SeatProps {
     onSit?: () => void;
     onUnseat?: () => void;   // nouvelle prop
     showCards?: boolean;
+    handCardCount?: number;   // cartes cachées (posées face cachée)
+    playedCardCount?: number;  // cartes visibles (main du joueur)
 }
 
 const Seat: React.FC<SeatProps> = ({
@@ -17,7 +19,9 @@ const Seat: React.FC<SeatProps> = ({
     username,
     chips,
     onSit,
-    showCards = true
+    showCards = true,
+    handCardCount = 0,
+    playedCardCount = 0,
 }) => {
     const isSeatThree = seatID === '3';
 
@@ -52,6 +56,30 @@ const Seat: React.FC<SeatProps> = ({
         );
     }
 
+    const getTranslateX = (cardCount: number): string => {
+        // Valeurs à ajuster expérimentalement
+        const map: Record<number, string> = {
+            1: '-translate-x-[-10%]',   // 50%
+            2: '-translate-x-[20%]',
+            3: '-translate-x-[60%]',
+            4: '-translate-x-[90%]',
+            5: '-translate-x-[110%]',
+        };
+        return map[cardCount] || '-translate-x-1/2';
+    };
+
+    const getAnotherTranslateX = (cardCount: number): string => {
+        // Valeurs à ajuster expérimentalement
+        const map: Record<number, string> = {
+            1: '-translate-x-[-10%]',   // 50%
+            2: '-translate-x-[20%]',
+            3: '-translate-x-[60%]',
+            4: '-translate-x-[90%]',
+            5: '-translate-x-[128%]',
+        };
+        return map[cardCount] || '-translate-x-1/2';
+    };
+
     // Cas 3 : siège occupé
     return (
         <div id={seatID} className="relative w-20 h-20">
@@ -60,21 +88,41 @@ const Seat: React.FC<SeatProps> = ({
                 <img src="img/user-avatar.png" className="w-full h-full object-cover" alt="" />
             </div>
 
-            {/* Éléments superposés (hors flux) - cartes cachées pour les autres joueurs */}
-            {showCards && (
+            {/* Éléments superposés (hors flux) : cartes visibles par un seul joueur utilisateur local */}
+            {handCardCount > 0 && showCards && (
                 <div className="absolute inset-0 pointer-events-none">
                     {isSeatThree ? (
-                        // cartes non visibles pour le siège 3
-                        <div className="absolute bottom-0 flex transform shadow-xl -translate-x-[110%] rounded-md z-10">
-                            {[...Array(5)].map((_, i) => (
-                                <img key={i} src="img/cards/hidden-card.png" className="w-[51px] h-[28px] relative shadow-xl px-[1px]" alt="" />
+                        <div className={`absolute bottom-0 flex transform shadow-xl rounded-md z-10 ${getTranslateX(handCardCount)}`}>
+                            {[...Array(handCardCount)].map((_, i) => (
+                                <img key={i} src="img/cards/s10.png" className="w-[51px] h-[28px] relative shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
                             ))}
                         </div>
                     ) : (
                         // cartes non visibles pour les sièges 1, 2, 4
-                        <div className="absolute bottom-0 flex transform shadow-xl -translate-x-[110%] rounded-md z-10">
-                            {[...Array(5)].map((_, i) => (
-                                <img key={i} src="img/cards/hidden-card.png" className="w-[51px] h-[28px] relative shadow-xl px-[1px]" alt="" />
+                        <div className={`absolute bottom-0 flex transform shadow-xl rounded-md z-10 ${getTranslateX(handCardCount)}`}>
+                            {[...Array(handCardCount)].map((_, i) => (
+                                <img key={i} src="img/cards/s10.png" className="w-[51px] h-[28px] relative shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* cartes faces cachées pour les joueurs autre que le joueur utilisateur local */}
+            {handCardCount > 0 && !showCards && (
+                <div className="absolute inset-0 pointer-events-none">
+                    {isSeatThree ? (
+                        // cartes non visibles pour le siège 3
+                        <div className={`absolute bottom-0 flex transform shadow-xl rounded-md z-10 ${getTranslateX(handCardCount)}`}>
+                            {[...Array(handCardCount)].map((_, i) => (
+                                <img key={i} src="img/cards/hidden-card.png" className="w-[51px] h-[28px] relative shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
+                            ))}
+                        </div>
+                    ) : (
+                        // cartes non visibles pour les sièges 1, 2, 4
+                        <div className={`absolute bottom-0 flex transform shadow-xl rounded-md z-10 ${getTranslateX(handCardCount)}`}>
+                            {[...Array(handCardCount)].map((_, i) => (
+                                <img key={i} src="img/cards/hidden-card.png" className="w-[51px] h-[28px] relative shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
                             ))}
                         </div>
                     )}
@@ -87,14 +135,14 @@ const Seat: React.FC<SeatProps> = ({
                 {chips !== undefined && ` (${chips} chips)`}
             </span>
 
-            {/* Cartes visibles et mise (pour le joueur local ou si showCards) */}
-            {showCards && (
+            {/* Cartes jouées par le joueur local en cours visibles par tout le monde eet lui même */}
+            {playedCardCount > 0 && (
                 <div className={isSeatThree ? "relative bottom-[182%]" : "relative top-[35%]"}>
                     <p className="relative transform -translate-y-[20%] text-white text-center py-2 w-[150px] bg-[#0FAC71] shadow-md rounded-full">
                         Mise: {chips ?? 0} chips
                     </p>
-                    <div className={`flex transform shadow-md ${isSeatThree ? '-translate-x-[128%] -translate-y-[40%]' : '-translate-x-[128%]'}`}>
-                        {[...Array(5)].map((_, i) => (
+                    <div className={`flex transform shadow-md ${getAnotherTranslateX(playedCardCount)} ${isSeatThree ? ' -translate-y-[40%]' : ''}`}>
+                        {[...Array(playedCardCount)].map((_, i) => (
                             <img key={i} src="img/cards/s10.png" className="w-[58px] h-[28px] relative object-cover shadow-xl px-[1px] border border-transparent border-b-white" alt="" />
                         ))}
                     </div>
