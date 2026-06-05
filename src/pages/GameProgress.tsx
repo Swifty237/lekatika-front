@@ -1,17 +1,19 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import Seat from '@/components/Seat';
 import type TatamiProps from '@/types/Tatami';
-import { MessageCircle, Pause, SquareArrowRightExit } from 'lucide-react';
+import { LogOut, MessageCircle, Pause, SquareArrowRightExit } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { showToast } from '@/components/CustomToast';
 
 const GameProgress: React.FC = () => {
     const [tatami, setTatami] = useState<TatamiProps>();
     const [isHeightAbove1200, setIsHeightAbove1200] = useState(false);
     const [isHeightAbove800, setIsHeightAbove800] = useState(false);
     const [isHeightAbove640, setIsHeightAbove640] = useState(false);
-    const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
+    const [currentUser, setCurrentUser] = useState<{ id: number, username: string } | null>(null);
 
+    const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
     const [searchParams] = useSearchParams();
 
     // Détection de la hauteur de l'écran
@@ -121,9 +123,127 @@ const GameProgress: React.FC = () => {
         }
     }, [searchParams]);
 
+    useEffect(() => {
+        const userId = localStorage.getItem('userId');
+        const username = localStorage.getItem('username');
+        if (userId && username) {
+            setCurrentUser({ id: parseInt(userId), username });
+        }
+    }, []);
+
+    const handleSit = async (seatNumber: number) => {
+        const token = localStorage.getItem('authToken');
+        const tableId = localStorage.getItem('currentTableId');
+        if (!token || !tableId) return;
+        try {
+            const response = await fetch(`${API_URL}/api/tables/${tableId}/sit/${seatNumber}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setTatami(data.table);
+                localStorage.setItem('currentTatami', JSON.stringify(data.table));
+            } else {
+                const error = await response.json();
+                showToast(error.error || "Impossible de s'asseoir", "error");
+            }
+        } catch (err) {
+            console.error(err);
+            showToast("Erreur réseau", "error");
+        }
+    };
+
+    // WebSocket pour les mises à jour en temps réel
+    useEffect(() => {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        const ws = new WebSocket(`ws://localhost:8080/ws?token=${encodeURIComponent(token)}`);
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'TABLE_UPDATED' && data.tableId === localStorage.getItem('currentTableId')) {
+                // Recharger la table
+                const fetchTable = async () => {
+                    const tableId = localStorage.getItem('currentTableId');
+                    const token = localStorage.getItem('authToken');
+                    if (!tableId || !token) return;
+                    const response = await fetch(`${API_URL}/api/tables/${tableId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        setTatami(data.table);
+                        localStorage.setItem('currentTatami', JSON.stringify(data.table));
+                    }
+                };
+                fetchTable();
+            }
+        };
+        return () => ws.close();
+    }, []);
+
+    // 1. Définir les positions avec un type Record<number, string> pour éviter l’erreur d’index
+    const seatPositions: Record<number, string> = {
+        1: "absolute -top-6 left-1/2 transform -translate-x-1/2",
+        2: "absolute top-1/2 -right-6 transform -translate-y-1/2",
+        3: "absolute -bottom-6 left-1/2 transform -translate-x-1/2",
+        4: "absolute top-1/2 -left-6 transform -translate-y-1/2",
+    };
+
+    const handleUnseat = async () => {
+        const token = localStorage.getItem('authToken');
+        const tableId = localStorage.getItem('currentTableId');
+        if (!token || !tableId) return;
+        try {
+            const response = await fetch(`${API_URL}/api/tables/${tableId}/unseat`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setTatami(data.table);
+                localStorage.setItem('currentTatami', JSON.stringify(data.table));
+                showToast("Vous vous êtes levé du siège", "success");
+            } else {
+                const error = await response.json();
+                showToast(error.error || "Impossible de se lever", "error");
+            }
+        } catch (err) {
+            console.error(err);
+            showToast("Erreur réseau", "error");
+        }
+    };
+
     if (!tatami) {
         return <div className="text-center mt-20">Chargement...</div>;
     }
+
+    const renderSeats = () => {
+        const isCurrentUserSeated = tatami.seats?.some(seatId => seatId === currentUser?.id);
+        return (
+            <>
+                {tatami.seats?.map((userId: number, idx: number) => {
+                    const seatNumber = idx + 1;
+                    const isOccupied = userId !== 0;
+                    const isCurrentUser = isOccupied && currentUser?.id === userId;
+                    const occupantName = isOccupied ? (isCurrentUser ? currentUser.username : `Joueur ${userId}`) : undefined;
+                    const showSitButton = !isOccupied && !isCurrentUserSeated; // ← la condition clé
+                    return (
+                        <div key={seatNumber} className={seatPositions[seatNumber]}>
+                            <Seat
+                                seatID={seatNumber.toString()}
+                                isOccupied={isOccupied}
+                                username={occupantName}
+                                chips={1000}
+                                onSit={showSitButton ? () => handleSit(seatNumber) : undefined}
+                                showCards={!!isCurrentUser}
+                            />
+                        </div>
+                    );
+                })}
+            </>
+        );
+    };
 
     return (
         <div className="min-h-screen grid grid-cols-1 bg-green-gradient font-suse overflow-y-auto justify-between">
@@ -134,10 +254,7 @@ const GameProgress: React.FC = () => {
                             // Version pour hauteur > 1200px
                             <div className="bg-green-gradient p-[2px] rounded-xl shadow-lg">
                                 <div className="relative bg-green-gradient w-[35em] 2md:w-[37em] 2lg:w-[57em] h-[37em] 2sm:h-[33em] 2md:h-[37em] rounded-xl shadow-xl">
-                                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
-                                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
-                                    <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
-                                    <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
+                                    {renderSeats()}
                                     <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
                                         <p className="text-sm pb-2">{tatami.name}</p>
                                         <p>Pot : 0 Chips</p>
@@ -151,10 +268,7 @@ const GameProgress: React.FC = () => {
                             // Version pour hauteur > 800px
                             <div className="bg-green-gradient p-[2px] rounded-xl shadow-lg">
                                 <div className="relative bg-green-gradient w-[37em] 2lg:w-[57em] h-[28em] rounded-xl shadow-xl">
-                                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
-                                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
-                                    <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
-                                    <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
+                                    {renderSeats()}
                                     <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
                                         <p className="text-sm pb-2">{tatami.name}</p>
                                         <p>Pot : 0 Chips</p>
@@ -167,10 +281,7 @@ const GameProgress: React.FC = () => {
                             // Version pour hauteur  800px
                             <div className="bg-green-gradient p-[2px] rounded-xl shadow-xl">
                                 <div className="relative bg-green-gradient w-[35em] 2md:w-[37em] 2lg:w-[57em] h-[26em] rounded-xl shadow-xl">
-                                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
-                                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
-                                    <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
-                                    <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
+                                    {renderSeats()}
                                     <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
                                         <p className="text-sm pb-2">{tatami.name}</p>
                                         <p>Pot : 0 Chips</p>
@@ -184,10 +295,7 @@ const GameProgress: React.FC = () => {
                             // Version pour hauteur  800px
                             <div className="bg-green-gradient p-[2px] rounded-xl shadow-lg">
                                 <div className="relative bg-green-gradient w-[35em] 2md:w-[37em] 2lg:w-[57em] h-[25em] rounded-xl shadow-xl">
-                                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2"><Seat seatID="1" /></div>
-                                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"><Seat seatID="3" /></div>
-                                    <div className="absolute top-1/2 -left-6 transform -translate-y-1/2"><Seat seatID="4" /></div>
-                                    <div className="absolute top-1/2 -right-6 transform -translate-y-1/2"><Seat seatID="2" /></div>
+                                    {renderSeats()}
                                     <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
                                         <p className="text-sm pb-2">{tatami.name}</p>
                                         <p>Pot : 0 Chips</p>
@@ -209,6 +317,15 @@ const GameProgress: React.FC = () => {
                         <Pause className="w-4 h-4 me-2" />
                         <span>Se mettre en pause</span>
                     </button>
+
+                    {/* Bouton Se lever (conditionnel) */}
+                    {tatami.seats?.includes(currentUser?.id ?? -1) && (
+                        <button onClick={handleUnseat} className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
+                            <LogOut className="w-4 h-4 me-2" />
+                            <span>Se lever</span>
+                        </button>
+                    )}
+
                     <button onClick={handleLeaveTatami} className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
                         <SquareArrowRightExit className="w-4 h-4 me-2" />
                         <span>Quitter</span>

@@ -205,7 +205,7 @@ const Navbar: React.FC = () => {
             />
 
             {isUserMenuOpen && (
-                <div className="backdrop-blur-sm px-4 shadow-xl flex justify-center">
+                <div className="backdrop-blur-sm px-4 shadow-xl flex justify-center" onClick={() => { setIsUserMenuOpen(false) }}>
                     <div className="px-8 pb-3 md:w-[50vw]">
                         <Link
                             to="/profile"

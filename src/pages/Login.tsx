@@ -77,6 +77,7 @@ const Login: React.FC = () => {
             if (response.ok) {
                 if (result.token) {
                     localStorage.setItem('authToken', result.token);
+                    localStorage.setItem('userId', result.user.id.toString());
                     localStorage.setItem('username', result.user.username);
                     localStorage.setItem('freeChipsAmount', result.user.freeChipsAmount);
                 }

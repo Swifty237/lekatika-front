@@ -9,7 +9,7 @@ export default interface TatamiProps {
     status: string;
     players: number[];
     created_at: string;
-    seats: [];
+    seats: number[];
     dealer: string;
     turn: string;
     last_winning_seat: string;
