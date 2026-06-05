@@ -14,7 +14,6 @@ import type UserProps from '@/types/User';
 const Lobby: React.FC = () => {
     const [username, setUsername] = useState<string>('');
     const [newTatamiOpen, setNewTatamiOpen] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [userData, setUserData] = useState<UserProps>(); // stocker toutes les infos
     const [tables, setTables] = useState<TatamiProps[]>([]); // État pour stocker les tatamis
     const [activeColumn, setActiveColumn] = useState(0);
@@ -93,7 +92,7 @@ const Lobby: React.FC = () => {
                 localStorage.setItem('currentTableId', result.table.id);
                 fetchTables(); // rafraîchir la liste des tables
 
-                newTab.location.href = '/game-progress';
+                newTab.location.href = `/game-progress?tableId=${result.table.id}`;
             } else {
                 showToast(result.error || "Impossible de rejoindre le tatami", "error");
                 newTab.close(); // fermer l'onglet vide
@@ -240,23 +239,28 @@ const Lobby: React.FC = () => {
     };
 
     useEffect(() => {
-        // 1. Créer la connexion WebSocket
-        const ws = new WebSocket('ws://localhost:8080/ws');
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        const ws = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
 
-        // 2. Écouter les messages du serveur
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'RELOAD_TABLES') {
-                // 3. Mettre à jour la liste des tatamis
                 fetchTables();
+            } else if (data.type === 'RECONNECT_TABLES') {
+                // Ouvrir un onglet pour chaque table
+                data.tableIds.forEach((tableId: string) => {
+                    const newTab = window.open('about:blank', '_blank');
+                    if (newTab) {
+                        // On passe l'ID dans l'URL plutôt que localStorage
+                        newTab.location.href = `/game-progress?tableId=${tableId}`;
+                    }
+                });
             }
         };
 
-        // 4. Nettoyer la connexion à la fermeture du composant
-        return () => {
-            ws.close();
-        };
-    }, []); // Dépendances vides pour initialisation unique
+        return () => ws.close();
+    }, []);
 
 
     return (
@@ -356,7 +360,7 @@ const Lobby: React.FC = () => {
                                                     }
                                                 </TableCell>
                                                 <TableCell className="px-6 py-4">
-                                                    <span className="flex">{table.bet} chips</span>
+                                                    <span className="flex justify-center">{table.bet} chips</span>
                                                 </TableCell>
                                                 <TableCell className="px-6 py-4">
                                                     {table.realMoney ?
@@ -366,16 +370,20 @@ const Lobby: React.FC = () => {
                                                 </TableCell>
                                                 <TableCell className="px-6 py-4">
                                                     {table.players && table.players.includes(userData!.id) ? (
-                                                        <button disabled className="text-gray-400  cursor-not-allowed">
-                                                            Rejoint
-                                                        </button>
+                                                        <div className="flex justify-center">
+                                                            <button disabled className="text-gray-400 cursor-not-allowed">
+                                                                Rejoint
+                                                            </button>
+                                                        </div>
                                                     ) : (
-                                                        <button
-                                                            onClick={() => handleJoinTable(table.id)}
-                                                            className="text-blue-600 hover:text-blue-800 "
-                                                        >
-                                                            Rejoindre
-                                                        </button>
+                                                        <div className="flex justify-center">
+                                                            <button
+                                                                onClick={() => handleJoinTable(table.id)}
+                                                                className="text-blue-600 hover:text-blue-800"
+                                                            >
+                                                                Rejoindre
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </TableCell>
                                             </TableRow>

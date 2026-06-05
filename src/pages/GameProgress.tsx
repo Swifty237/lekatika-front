@@ -3,6 +3,7 @@ import Seat from '@/components/Seat';
 import type TatamiProps from '@/types/Tatami';
 import { MessageCircle, Pause, SquareArrowRightExit } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 const GameProgress: React.FC = () => {
     const [tatami, setTatami] = useState<TatamiProps>();
@@ -10,6 +11,8 @@ const GameProgress: React.FC = () => {
     const [isHeightAbove800, setIsHeightAbove800] = useState(false);
     const [isHeightAbove640, setIsHeightAbove640] = useState(false);
     const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
+
+    const [searchParams] = useSearchParams();
 
     // Détection de la hauteur de l'écran
     useEffect(() => {
@@ -54,19 +57,10 @@ const GameProgress: React.FC = () => {
 
     // Gérer la fermeture non contrôlée (croix de l'onglet, rafraîchissement)
     useEffect(() => {
-        const handleBeforeUnload = () => {
-            const token = localStorage.getItem('authToken');
-            const tableId = localStorage.getItem('currentTableId');
-
+        const handleBeforeUnload = async () => {
             const isManualLeave = sessionStorage.getItem('manualLeave');
             if (isManualLeave) {
                 sessionStorage.removeItem('manualLeave');
-                if (!token || !tableId) return;
-                fetch(`${API_URL}/api/tables/${tableId}/leave`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    keepalive: true
-                }).catch(console.error);
                 return;
             }
         };
@@ -116,6 +110,16 @@ const GameProgress: React.FC = () => {
         if (isHeightAbove640) return 'h-[38em]';
         return 'h-[28em]';
     };
+
+    useEffect(() => {
+        // Si un tableId est fourni dans l'URL, on le stocke
+        const tableIdFromUrl = searchParams.get('tableId');
+        if (tableIdFromUrl) {
+            localStorage.setItem('currentTableId', tableIdFromUrl);
+            // Optionnel : nettoyer l'URL
+            window.history.replaceState({}, '', '/game-progress');
+        }
+    }, [searchParams]);
 
     if (!tatami) {
         return <div className="text-center mt-20">Chargement...</div>;
