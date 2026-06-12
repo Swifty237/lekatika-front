@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronDown, ChevronUp, HomeIcon, UserCog, Bell, Search, SquareArrowRightExit, CirclePlus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-// import ConfirmationDialog from '@/components/ConfirmationDialog';
+import { formatNumber } from '@/lib/formatNumber';
 import AddChipsDialog from '@/components/AddChipsDialog';
 
 const Navbar: React.FC = () => {
@@ -30,7 +30,7 @@ const Navbar: React.FC = () => {
         // Mettre à jour le montant des freeChips
         const newAmount = Number(freeChipsAmount) + amount;
         setFreeChipsAmount(newAmount.toString());
-        localStorage.setItem('freeChipsAmount', newAmount.toString());
+        localStorage.setItem('freeChipsAmountBankroll', newAmount.toString());
         // Ici plus tard tu pourras appeler une API pour synchroniser avec le backend
         console.log(`Ajout de ${amount} jetons. Nouveau solde : ${newAmount}`);
     };
@@ -38,7 +38,7 @@ const Navbar: React.FC = () => {
     // Récupérer le username depuis localStorage au chargement et à chaque changement de route
     useEffect(() => {
         const storedUsername = localStorage.getItem('username');
-        const storedfreeChipsAmount = localStorage.getItem('freeChipsAmount');
+        const storedfreeChipsAmount = localStorage.getItem('freeChipsAmountBankroll');
 
         if (storedUsername) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -73,7 +73,7 @@ const Navbar: React.FC = () => {
         // Nettoyage local
         localStorage.removeItem('authToken');
         localStorage.removeItem('username');
-        localStorage.removeItem('freeChipsAmount');
+        localStorage.removeItem('freeChipsAmountBankroll');
         localStorage.removeItem('currentTatami');
         localStorage.removeItem('currentTableId');
         navigate('/login');
@@ -110,7 +110,7 @@ const Navbar: React.FC = () => {
                         onClick={() => setAddChipsOpen(true)}
                         className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-1 px-2 sm:px-4 shadow-xl rounded-lg"
                     >
-                        <p>{selectedCurrency === '0' ? Number(freeChipsAmount) : 0}</p>
+                        <p>{selectedCurrency === '0' ? formatNumber(freeChipsAmount) : '0'}</p>
                         <CirclePlus className="h-4 w-4 ms-4" />
                     </button>
                 </div>

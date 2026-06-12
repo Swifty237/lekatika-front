@@ -8,8 +8,10 @@ export default interface TatamiProps {
     is_real_money: boolean;
     status: string;
     players: number[];
+    player_usernames: string[];
     created_at: string;
-    seats: number[];
+    seats: { user_id: number; amount_at_stake: number }[];
+    seats_connected: boolean[];
     dealer: string;
     turn: string;
     last_winning_seat: string;
@@ -40,4 +42,5 @@ export default interface NormalizedTatamiProps {
     paid33: boolean;
     bet: string;
     players: number[];
+    seatsConnected: boolean[];
 }

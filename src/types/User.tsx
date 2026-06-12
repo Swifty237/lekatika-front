@@ -1,4 +1,8 @@
 export default interface UserProps {
-    id: number;
-    name: string;
+    user_id: number;
+    username: string;
+    email: string;
+    free_chips_amount_bankroll: number;
+    real_chips_amount_bankroll: number;
+    profile_picture_link: string;
 }

@@ -12,7 +12,6 @@ import type UserProps from '@/types/User';
 
 
 const Lobby: React.FC = () => {
-    const [username, setUsername] = useState<string>('');
     const [newTatamiOpen, setNewTatamiOpen] = useState(false);
     const [userData, setUserData] = useState<UserProps>(); // stocker toutes les infos
     const [tables, setTables] = useState<TatamiProps[]>([]); // État pour stocker les tatamis
@@ -89,7 +88,7 @@ const Lobby: React.FC = () => {
             const result = await response.json();
 
             if (response.ok) {
-                localStorage.setItem('currentTableId', result.table.id);
+                localStorage.setItem('currentTableID', result.table.id);
                 fetchTables(); // rafraîchir la liste des tables
 
                 newTab.location.href = `/game-progress?tableId=${result.table.id}`;
@@ -137,12 +136,10 @@ const Lobby: React.FC = () => {
                 });
                 if (response.ok) {
                     const result = await response.json();
-                    // console.log(result.user);
                     setUserData(result.user);
-                    setUsername(result.user.username);
-                    // Mettre à jour localStorage si besoin (freeChipsAmount, etc.)
+
                     localStorage.setItem('username', result.user.username);
-                    localStorage.setItem('freeChipsAmount', result.user.freeChipsAmount?.toString() || '0');
+                    localStorage.setItem('freeChipsAmountBankroll', result.user.free_chips_amount_bankroll);
                 } else {
                     // Token invalide → rediriger vers login
                     localStorage.removeItem('authToken');
@@ -190,7 +187,7 @@ const Lobby: React.FC = () => {
             const result = await response.json();
 
             if (response.ok) {
-                localStorage.setItem('currentTableId', result.table.id);
+                localStorage.setItem('currentTableID', result.table.id);
                 // Rafraîchir la liste des tables dans le lobby
                 await fetchTables(); // attendre la mise à jour
                 newTab.location.href = '/game-progress';
@@ -267,7 +264,7 @@ const Lobby: React.FC = () => {
         <MainLayout>
             <div className="flex flex-col items-center">
                 <h1 className="text-4xl font-bold mt-4 my-4">
-                    Salut <span className="capitalize">{username}</span> !
+                    Salut <span className="capitalize">{userData?.username}</span> !
                 </h1>
 
                 <p className="text-3xl font-bold mb-4">
@@ -297,7 +294,7 @@ const Lobby: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="w-full flex flex-col justify-center items-center 2lg:w-[60vw] lg:w-[90vw] min-h-[30vh] bg-white mt-8 rounded-md text-black">
+                <div className="w-full flex flex-col justify-center items-center 2lg:w-[80vw] lg:w-[90vw] min-h-[30vh] bg-white mt-8 rounded-md text-black">
                     <div className="p-8 w-full overflow-x-auto">
                         {tables.length === 0 ? (
                             <div className="flex flex-col items-center">
@@ -369,7 +366,7 @@ const Lobby: React.FC = () => {
                                                     }
                                                 </TableCell>
                                                 <TableCell className="px-6 py-4">
-                                                    {table.players && table.players.includes(userData!.id) ? (
+                                                    {table.players && table.players.includes(userData!.user_id) ? (
                                                         <div className="flex justify-center">
                                                             <button disabled className="text-gray-400 cursor-not-allowed">
                                                                 Rejoint
@@ -435,7 +432,7 @@ const Lobby: React.FC = () => {
                                                     </TableCell>
 
                                                     <TableCell className="text-center">
-                                                        {row.players && row.players.includes(userData!.id) ? (
+                                                        {row.players && row.players.includes(userData!.user_id) ? (
                                                             <button disabled className="text-gray-400 cursor-not-allowed">
                                                                 Rejoint
                                                             </button>

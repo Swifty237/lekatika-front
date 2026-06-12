@@ -34,15 +34,17 @@ const Login: React.FC = () => {
                 if (response.ok) {
                     const result = await response.json();
                     // Mettre à jour localStorage avec les données fraîches
+                    localStorage.setItem('userID', result.user.user_id);
                     localStorage.setItem('username', result.user.username);
-                    localStorage.setItem('freeChipsAmount', result.user.freeChipsAmount?.toString() ?? '0');
+                    localStorage.setItem('freeChipsAmountBankroll', result.user.free_chips_amount_bankroll);
                     showToast('Reconnexion automatique', 'success');
                     navigate('/lobby');
                 } else {
                     // Token invalide ou expiré
                     localStorage.removeItem('authToken');
+                    localStorage.removeItem('userID');
                     localStorage.removeItem('username');
-                    localStorage.removeItem('freeChipsAmount');
+                    localStorage.removeItem('freeChipsAmountBankroll');
                 }
             } catch (err) {
                 console.error('Erreur lors de la vérification du token', err);
@@ -77,9 +79,9 @@ const Login: React.FC = () => {
             if (response.ok) {
                 if (result.token) {
                     localStorage.setItem('authToken', result.token);
-                    localStorage.setItem('userId', result.user.id.toString());
+                    localStorage.setItem('userID', result.user.user_id);
                     localStorage.setItem('username', result.user.username);
-                    localStorage.setItem('freeChipsAmount', result.user.freeChipsAmount);
+                    localStorage.setItem('freeChipsAmountBankroll', result.user.free_chips_amount_bankroll);
                 }
 
                 showToast("Connexion reussie !", "success");
@@ -117,17 +119,28 @@ const Login: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen py-12 px-2 sm:px-6 lg:px-8 bg-green-gradient font-suse">
-            <div className="flex flex-col-reverse xl:flex-row justify-around items-center w-full min-h-[85vh]">
-                <div className="xl:w-[30vw] bg-red-gradient px-8 mx-8 rounded-lg shadow-xl pb-4">
-                    <div>
+        <div className="min-h-screen bg-green-gradient font-suse flex items-center justify-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 mt-8 mx-2">
+                    <div className="bg-green-gradient rounded-lg flex items-center justify-center mx-10 shadow-xl">
+                        <h1 className="text-5xl xl:text-7xl font-extrabold text-center text-white shadow-xl py-4 px-8 rounded-xl">
+                            Le katika.com
+                        </h1>
+                    </div>
+                    <div className="my-8 pb-8 flex justify-center">
+                        <img className="flex" src="img/main-illustration-desktop@2x.png" alt="" />
+                    </div>
+                </div>
+
+                <div className="bg-red-gradient flex flex-col items-center justify-center p-4 mx-4 lg:mx-8 rounded-lg shadow-xl">
+                    <div className="w-[70%]">
                         <img src="img/logo-transparent.png" alt="" />
                     </div>
 
                     <h2 className="text-center text-xl font-extrabold text-white">
                         Connexion
                     </h2>
-                    <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                    <form className="mt-8 space-y-6 w-full" onSubmit={handleSubmit}>
                         {/* {error && (
                             <div className="text-red-500 text-sm text-center">{error}</div>
                         )} */}
@@ -192,17 +205,6 @@ const Login: React.FC = () => {
                             </Link>
                         </div>
                     </form>
-                </div>
-
-                <div className="flex flex-col items-center xl:w-[50vw] rounded-sm">
-                    <div className="p-8">
-                        <h1 className="text-center text-7xl font-extrabold text-white">
-                            Le katika.com
-                        </h1>
-                    </div>
-                    <div className="mb-8 pb-8">
-                        <img className="flex" src="img/main-illustration-desktop@2x.png" alt="" />
-                    </div>
                 </div>
             </div>
         </div>

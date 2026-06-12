@@ -120,13 +120,13 @@
 }
 
 .bg-green-gradient {
-    background: linear-gradient(45deg, #000000, #0FAC71, #2c5036);
-    background-size: 200% 200%;
+    background: linear-gradient(45deg, #000000, #0FAC71, #000000);
+    background-size: 210% 210%;
     animation: background-move 18s ease-in-out infinite;
 }
 
 .bg-red-gradient {
     background: linear-gradient(45deg, #0FAC71, #ea2020, #F5DF4D);
-    background-size: 180% 180%;
+    background-size: 170% 170%;
     animation: background-move 18s ease-in-out infinite;
 }
