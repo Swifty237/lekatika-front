@@ -10,10 +10,17 @@ import { Toaster } from "@/components/ui/sonner"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from './components/ui/tooltip';
 import JoinTable from './components/JoinTable';
+import { UserProvider } from '@/context/UserContext';
+import type { ReactNode } from 'react';
 
 const queryClient = new QueryClient();
 
-const PrivateRoute = ({ children }) => {
+interface PrivateRouteProps {
+  children: ReactNode;
+}
+
+
+const PrivateRoute = ({ children }: PrivateRouteProps) => {
   const token = localStorage.getItem("authToken");
   return token ? children : <Navigate to="/" replace />;
 };
@@ -23,20 +30,22 @@ function App() {
     <>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <Router>
-            <Toaster />
-            <Routes>
-              {/* Page d'accueil : redirige vers lobby (ou login selon besoin) */}
-              <Route path="/" element={<Login />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/lobby" element={<PrivateRoute><Lobby /></PrivateRoute>} />
-              <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-              <Route path="/notifications" element={<PrivateRoute><Notifications /></PrivateRoute>} />
-              <Route path="/game-progress" element={<PrivateRoute><GameProgress /></PrivateRoute>} />
-              <Route path="/join/:id" element={<PrivateRoute><JoinTable /></PrivateRoute>} />
-            </Routes>
-          </Router>
+          <UserProvider>
+            <Router>
+              <Toaster />
+              <Routes>
+                {/* Page d'accueil : redirige vers lobby (ou login selon besoin) */}
+                <Route path="/" element={<Login />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/lobby" element={<PrivateRoute><Lobby /></PrivateRoute>} />
+                <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+                <Route path="/notifications" element={<PrivateRoute><Notifications /></PrivateRoute>} />
+                <Route path="/game-progress" element={<PrivateRoute><GameProgress /></PrivateRoute>} />
+                <Route path="/join/:id" element={<PrivateRoute><JoinTable /></PrivateRoute>} />
+              </Routes>
+            </Router>
+          </UserProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </>

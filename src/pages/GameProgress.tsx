@@ -3,13 +3,15 @@ import Seat from '@/components/Seat';
 import type TatamiProps from '@/types/Tatami';
 import { LogOut, MessageCircle, Pause, SquareArrowRightExit } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { showToast } from '@/components/CustomToast';
-import type UserProps from '@/types/User';
+import SitOnTableDialog from '@/components/dialog/SitOnTableDialog';
+import { useUser } from '@/hooks/useUser';
 
 const GameProgress: React.FC = () => {
 
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
+    const { user: currentUser, refreshUser } = useUser();
     const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
 
     const [tatami, setTatami] = useState<TatamiProps>();
@@ -19,7 +21,10 @@ const GameProgress: React.FC = () => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [seatBet, setSeatBet] = useState(0);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [currentUser, setCurrentUser] = useState<UserProps | null>(null);
+    const [sitOnTableDialogOpen, setSitOnTableDialogOpen] = useState(false)
+    const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
+    const [maxBet, setMaxBet] = useState<number>(0);
+
 
 
     const [searchParams] = useSearchParams();
@@ -79,11 +84,15 @@ const GameProgress: React.FC = () => {
     }, []);
 
     // Chargement initial de la table
+    console.log("GameProgress monté");
+
     useEffect(() => {
         const fetchTable = async () => {
             const tableId = localStorage.getItem('currentTableID');
             const token = localStorage.getItem('authToken');
+            console.log("fetchTable - tableId:", tableId, "token:", token ? "présent" : "absent");
             if (!tableId || !token) {
+                console.log("Pas de tableId ou token, fermeture de l'onglet");
                 window.close();
                 return;
             }
@@ -91,11 +100,14 @@ const GameProgress: React.FC = () => {
                 const response = await fetch(`${API_URL}/api/tables/${tableId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
+                console.log("Réponse GET table:", response.status);
                 if (response.ok) {
                     const data = await response.json();
+                    console.log("Table chargée:", data.table);
                     setTatami(data.table);
                     localStorage.setItem('currentTatami', JSON.stringify(data.table));
                 } else {
+                    console.log("Erreur chargement table, fermeture");
                     window.close();
                 }
             } catch (err) {
@@ -105,55 +117,6 @@ const GameProgress: React.FC = () => {
         };
         fetchTable();
     }, []);
-
-    // Chargement des données utilisateur
-    useEffect(() => {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            navigate('/login');
-            return;
-        }
-        const fetchUserData = async () => {
-            try {
-                console.log("Fetching user data with token:", token);
-                const response = await fetch(`${API_URL}/api/user/me`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                console.log("User response status:", response.status);
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log("Full user response:", result);
-                    // Vérifiez la structure : result.user contient l'utilisateur
-                    if (result.user) {
-                        const user = result.user;
-                        setCurrentUser({
-                            user_id: user.user_id || user.id || user.ID,  // on prend la première valeur trouvée
-                            username: user.username,
-                            email: user.email,
-                            free_chips_amount_bankroll: user.free_chips_amount_bankroll,
-                            real_chips_amount_bankroll: user.real_chips_amount_bankroll,
-                            profile_picture_link: user.profile_picture_link,
-                        });
-                    } else {
-                        console.error("No user object in response");
-                        localStorage.removeItem('authToken');
-                        navigate('/login');
-                        return;
-                    }
-                } else {
-                    console.error("Failed to fetch user, status:", response.status);
-                    localStorage.removeItem('authToken');
-                    navigate('/login');
-                    return;
-                }
-            } catch (err) {
-                console.error("Error fetching user:", err);
-                navigate('/login');
-                return;
-            }
-        };
-        fetchUserData();
-    }, [navigate, API_URL]);
 
     // Fonction pour déterminer la classe de hauteur du conteneur
     const getContainerHeightClass = () => {
@@ -180,22 +143,29 @@ const GameProgress: React.FC = () => {
         }
     }, [searchParams]);
 
-    const handleSit = async (seatNumber: number) => {
+    const handleSitWithAmount = async (amount: number) => {
         const token = localStorage.getItem('authToken');
         const tableId = localStorage.getItem('currentTableID');
-        if (!token || !tableId) return;
+        if (!token || !tableId || selectedSeat === null) return;
         try {
-            const response = await fetch(`${API_URL}/api/tables/${tableId}/sit/${seatNumber}`, {
+            const response = await fetch(`${API_URL}/api/tables/${tableId}/sit/${selectedSeat}`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ amount })
             });
+            const data = await response.json();
             if (response.ok) {
-                const data = await response.json();
                 setTatami(data.table);
                 localStorage.setItem('currentTatami', JSON.stringify(data.table));
+                setSitOnTableDialogOpen(false);
+                setSelectedSeat(null);
+                showToast("Vous êtes assis avec une mise de " + amount + " chips", "success");
+                await refreshUser(); // ← crucial : recharge l’utilisateur depuis le backend
             } else {
-                const error = await response.json();
-                showToast(error.error || "Impossible de s'asseoir", "error");
+                showToast(data.error || "Impossible de s'asseoir", "error");
             }
         } catch (err) {
             console.error(err);
@@ -254,6 +224,8 @@ const GameProgress: React.FC = () => {
                 setTatami(data.table);
                 localStorage.setItem('currentTatami', JSON.stringify(data.table));
                 showToast("Vous vous êtes levé du siège", "success");
+
+                await refreshUser();
             } else {
                 const error = await response.json();
                 showToast(error.error || "Impossible de se lever", "error");
@@ -263,6 +235,13 @@ const GameProgress: React.FC = () => {
             showToast("Erreur réseau", "error");
         }
     };
+
+    // useEffect(() => {
+    //     if (currentUser === null && localStorage.getItem('authToken')) {
+    //         // Le token existe mais l’utilisateur n’a pas pu être chargé → rediriger
+    //         navigate('/login');
+    //     }
+    // }, [currentUser, navigate]);
 
     if (!tatami || !currentUser) {
         return <div className="text-center mt-20">Chargement...</div>;
@@ -293,7 +272,11 @@ const GameProgress: React.FC = () => {
                                 isOccupied={isOccupied}
                                 username={occupantName}
                                 chips={chipsAmount}
-                                onSit={showSitButton ? () => handleSit(seatNumber) : undefined}
+                                onSit={showSitButton ? () => {
+                                    setSelectedSeat(seatNumber);
+                                    setMaxBet(currentUser?.free_chips_amount_bankroll || 0);
+                                    setSitOnTableDialogOpen(true);
+                                } : undefined}
                                 showCards={!!isCurrentUser}
                                 handCardCount={isOccupied ? 5 : 0}
                                 playedCardCount={isOccupied ? 5 : 0}
@@ -368,6 +351,13 @@ const GameProgress: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <SitOnTableDialog
+                open={sitOnTableDialogOpen}
+                onConfirm={handleSitWithAmount} // ← on passe la fonction complète
+                onCancel={() => setSitOnTableDialogOpen(false)}
+                maxAmount={maxBet}
+            />
 
             {/* Barre d'actions en bas */}
             <div className="flex min-w-[55em]">

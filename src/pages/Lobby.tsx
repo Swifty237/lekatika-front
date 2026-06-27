@@ -2,23 +2,22 @@
 import React, { useEffect, useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { Beer, ChevronLeft, ChevronRight, CircleDollarSign, DoorClosedLocked, DoorOpen, Play, SquareArrowOutUpRight, TriangleAlert } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import NewTatamiDialog from '@/components/NewTatamiDialog';
+import { useNavigate } from 'react-router-dom';
+import NewTatamiDialog from '@/components/dialog/NewTatamiDialog';
 import { showToast } from '@/components/CustomToast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import type TatamiProps from '@/types/Tatami';
-import type UserProps from '@/types/User';
+import { useUser } from '@/hooks/useUser';
 
 
 const Lobby: React.FC = () => {
     const [newTatamiOpen, setNewTatamiOpen] = useState(false);
-    const [userData, setUserData] = useState<UserProps>(); // stocker toutes les infos
     const [tables, setTables] = useState<TatamiProps[]>([]); // État pour stocker les tatamis
     const [activeColumn, setActiveColumn] = useState(0);
 
-    const location = useLocation();
     const navigate = useNavigate();
+    const { user } = useUser();
 
     const tableHeads = ["Nom", "Privé / Publique", "Avec la 33", "Mise"];
 
@@ -119,42 +118,6 @@ const Lobby: React.FC = () => {
     }, []);
 
 
-    // Charger les données utilisateur depuis le backend
-    useEffect(() => {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            navigate('/login');
-            return;
-        }
-
-        const fetchUserData = async () => {
-            try {
-                const response = await fetch(`${API_URL}/api/user/me`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (response.ok) {
-                    const result = await response.json();
-                    setUserData(result.user);
-
-                    localStorage.setItem('username', result.user.username);
-                    localStorage.setItem('freeChipsAmountBankroll', result.user.free_chips_amount_bankroll);
-                } else {
-                    // Token invalide → rediriger vers login
-                    localStorage.removeItem('authToken');
-                    navigate('/login');
-                }
-            } catch (err) {
-                console.error(err);
-                navigate('/login');
-            }
-        };
-
-        fetchUserData();
-    }, [location, navigate]);
-
-
     const handleNewTatami = async (privateTatami: boolean, realMoney: boolean, bet: string, paid33: boolean) => {
         const tatamiName = generateTatamiName();
         const token = localStorage.getItem('authToken');
@@ -162,7 +125,7 @@ const Lobby: React.FC = () => {
             navigate('/login');
             return;
         }
-
+        console.log("Creating new tatami, opening tab...");
         const newTab = window.open('about:blank', '_blank');
         if (!newTab) {
             showToast("Impossible d'ouvrir un nouvel onglet", "error");
@@ -187,10 +150,11 @@ const Lobby: React.FC = () => {
             const result = await response.json();
 
             if (response.ok) {
+                console.log("Table créée, ID:", result.table.id);
                 localStorage.setItem('currentTableID', result.table.id);
-                // Rafraîchir la liste des tables dans le lobby
-                await fetchTables(); // attendre la mise à jour
-                newTab.location.href = '/game-progress';
+                await fetchTables();
+                console.log("Ouverture de l'onglet vers /game-progress");
+                newTab.location.href = `/game-progress?tableId=${result.table.id}`;
             } else {
                 showToast(result.error || "Erreur lors de la création du tatami", "error");
                 newTab.close();
@@ -235,36 +199,12 @@ const Lobby: React.FC = () => {
         }
     };
 
-    useEffect(() => {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
-        const ws = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
-
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'RELOAD_TABLES') {
-                fetchTables();
-            } else if (data.type === 'RECONNECT_TABLES') {
-                // Ouvrir un onglet pour chaque table
-                data.tableIds.forEach((tableId: string) => {
-                    const newTab = window.open('about:blank', '_blank');
-                    if (newTab) {
-                        // On passe l'ID dans l'URL plutôt que localStorage
-                        newTab.location.href = `/game-progress?tableId=${tableId}`;
-                    }
-                });
-            }
-        };
-
-        return () => ws.close();
-    }, []);
-
 
     return (
         <MainLayout>
             <div className="flex flex-col items-center">
                 <h1 className="text-4xl font-bold mt-4 my-4">
-                    Salut <span className="capitalize">{userData?.username}</span> !
+                    Salut <span className="capitalize">{user?.username}</span> !
                 </h1>
 
                 <p className="text-3xl font-bold mb-4">
@@ -366,7 +306,7 @@ const Lobby: React.FC = () => {
                                                     }
                                                 </TableCell>
                                                 <TableCell className="px-6 py-4">
-                                                    {table.players && table.players.includes(userData!.user_id) ? (
+                                                    {table.players && table.players.includes(user!.user_id) ? (
                                                         <div className="flex justify-center">
                                                             <button disabled className="text-gray-400 cursor-not-allowed">
                                                                 Rejoint
@@ -432,7 +372,7 @@ const Lobby: React.FC = () => {
                                                     </TableCell>
 
                                                     <TableCell className="text-center">
-                                                        {row.players && row.players.includes(userData!.user_id) ? (
+                                                        {row.players && row.players.includes(user!.user_id) ? (
                                                             <button disabled className="text-gray-400 cursor-not-allowed">
                                                                 Rejoint
                                                             </button>

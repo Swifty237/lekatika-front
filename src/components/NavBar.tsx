@@ -3,11 +3,14 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronDown, ChevronUp, HomeIcon, UserCog, Bell, Search, SquareArrowRightExit, CirclePlus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { formatNumber } from '@/lib/formatNumber';
-import AddChipsDialog from '@/components/AddChipsDialog';
+import AddChipsDialog from '@/components/dialog/AddChipsDialog';
+import { useUser } from '@/hooks/useUser';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { user } = useUser()
+
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [username, setUsername] = useState<string>('');
     const [selectedCurrency, setSelectedCurrency] = useState<string>('0'); // '0' = fictif, '1' = réel
@@ -110,7 +113,7 @@ const Navbar: React.FC = () => {
                         onClick={() => setAddChipsOpen(true)}
                         className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-1 px-2 sm:px-4 shadow-xl rounded-lg"
                     >
-                        <p>{selectedCurrency === '0' ? formatNumber(freeChipsAmount) : '0'}</p>
+                        <p>{selectedCurrency === '0' ? formatNumber(user?.free_chips_amount_bankroll ?? 0) : '0'}</p>
                         <CirclePlus className="h-4 w-4 ms-4" />
                     </button>
                 </div>

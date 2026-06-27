@@ -2,9 +2,11 @@ import { Eye, EyeOff } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { showToast } from '@/components/CustomToast';
+import { useUser } from '@/hooks/useUser';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
+    const { refreshUser } = useUser();
 
     const [showPassword, setShowPassword] = useState(false);
     const [credentials, setCredentials] = useState({
@@ -33,10 +35,12 @@ const Login: React.FC = () => {
                 });
                 if (response.ok) {
                     const result = await response.json();
+
                     // Mettre à jour localStorage avec les données fraîches
                     localStorage.setItem('userID', result.user.user_id);
                     localStorage.setItem('username', result.user.username);
                     localStorage.setItem('freeChipsAmountBankroll', result.user.free_chips_amount_bankroll);
+                    await refreshUser();
                     showToast('Reconnexion automatique', 'success');
                     navigate('/lobby');
                 } else {
@@ -54,7 +58,7 @@ const Login: React.FC = () => {
         };
 
         verifyToken();
-    }, [navigate, API_URL]);
+    }, [navigate, API_URL, refreshUser]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -64,8 +68,6 @@ const Login: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         // setLoading(true);
-
-        const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
 
         try {
             const response = await fetch(`${API_URL}/api/auth/login`, {
@@ -82,6 +84,7 @@ const Login: React.FC = () => {
                     localStorage.setItem('userID', result.user.user_id);
                     localStorage.setItem('username', result.user.username);
                     localStorage.setItem('freeChipsAmountBankroll', result.user.free_chips_amount_bankroll);
+                    await refreshUser(); // charge l'utilisateur dans le contexte
                 }
 
                 showToast("Connexion reussie !", "success");
