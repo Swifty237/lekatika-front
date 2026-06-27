@@ -73,15 +73,39 @@ const GameProgress: React.FC = () => {
     // Gérer la fermeture non contrôlée (croix de l'onglet, rafraîchissement)
     useEffect(() => {
         const handleBeforeUnload = async () => {
+            // Détecter si c'est un rechargement (ne pas quitter dans ce cas)
+            const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+            if (navEntry && navEntry.type === 'reload') {
+                return; // L'utilisateur recharge la page, on ne quitte pas
+            }
+
+            // Si c'est une sortie volontaire via le bouton "Quitter", on a déjà appelé performLeave()
             const isManualLeave = sessionStorage.getItem('manualLeave');
             if (isManualLeave) {
                 sessionStorage.removeItem('manualLeave');
                 return;
             }
+
+            // Sinon, c'est une fermeture d'onglet ou de navigateur → quitter la table immédiatement
+            const token = localStorage.getItem('authToken');
+            const tableId = localStorage.getItem('currentTableID');
+            if (!token || !tableId) return;
+
+            // Envoi de la requête avec keepalive pour garantir la livraison
+            fetch(`${API_URL}/api/tables/${tableId}/leave`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` },
+                keepalive: true
+            }).catch(console.error);
+
+            // Nettoyage local (pour éviter les incohérences)
+            localStorage.removeItem('currentTatami');
+            localStorage.removeItem('currentTableID');
         };
+
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, []);
+    }, [API_URL]);
 
     // Chargement initial de la table
     console.log("GameProgress monté");

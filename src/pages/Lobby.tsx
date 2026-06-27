@@ -199,6 +199,22 @@ const Lobby: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        const ws = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'RELOAD_TABLES') {
+                fetchTables();
+            }
+        };
+
+        return () => ws.close();
+    }, []);
+
+
 
     return (
         <MainLayout>
