@@ -38,26 +38,6 @@ const Navbar: React.FC = () => {
         console.log(`Ajout de ${amount} jetons. Nouveau solde : ${newAmount}`);
     };
 
-    // Récupérer le username depuis localStorage au chargement et à chaque changement de route
-    useEffect(() => {
-        const storedUsername = localStorage.getItem('username');
-        const storedfreeChipsAmount = localStorage.getItem('freeChipsAmountBankroll');
-
-        if (storedUsername) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setUsername(storedUsername);
-        } else {
-            setUsername('');
-        }
-
-        if (storedfreeChipsAmount) {
-            setFreeChipsAmount(storedfreeChipsAmount);
-        } else {
-            setFreeChipsAmount('');
-        }
-    }, [location]); // se met à jour quand la route change (ex: après login redirige vers /lobby)
-
-
     const handleLogout = async () => {
         const token = localStorage.getItem('authToken');
         const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
@@ -81,6 +61,25 @@ const Navbar: React.FC = () => {
         localStorage.removeItem('currentTableId');
         navigate('/login');
     };
+
+    // Récupérer le username depuis localStorage au chargement et à chaque changement de route
+    useEffect(() => {
+        const storedUsername = localStorage.getItem('username');
+        const storedfreeChipsAmount = localStorage.getItem('freeChipsAmountBankroll');
+
+        if (storedUsername) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setUsername(storedUsername);
+        } else {
+            setUsername('');
+        }
+
+        if (storedfreeChipsAmount) {
+            setFreeChipsAmount(storedfreeChipsAmount);
+        } else {
+            setFreeChipsAmount('');
+        }
+    }, []);
 
     return (
         <nav id="main-nav" className="shadow-md text-sm fixed top-0 left-0 w-full z-50 backdrop-blur-2xl transition-shadow duration-300">

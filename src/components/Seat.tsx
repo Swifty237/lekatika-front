@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { WifiOff } from 'lucide-react';
+import cards from '@/components/Cards';
 
 interface SeatProps {
     seatID: string;
@@ -8,13 +9,15 @@ interface SeatProps {
     username?: string;
     chips?: number;
     onSit?: () => void;
-    onUnseat?: () => void;   // nouvelle prop
+    onUnseat?: () => void;
     showCards?: boolean;
-    handCardCount?: number;   // cartes cachées (posées face cachée)
-    playedCardCount?: number;  // cartes visibles (main du joueur)
+    handCards?: string[];        // ← nouvelle prop
+    playedCards?: string[];      // ← nouvelle prop
     isConnected?: boolean;
     seatBet: number;
+    onCardDoubleClick?: (index: number) => void;
 }
+
 
 const Seat: React.FC<SeatProps> = ({
     seatID,
@@ -23,12 +26,51 @@ const Seat: React.FC<SeatProps> = ({
     chips,
     onSit,
     showCards = true,
-    handCardCount = 0,
-    playedCardCount = 0,
+    handCards = [],
+    playedCards = [],
     isConnected,
-    seatBet
+    seatBet,
+    onCardDoubleClick
 }) => {
+
+    const [isDragOver, setIsDragOver] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+
     const isSeatThree = seatID === '3';
+    const isSeatTwo = seatID === '2';
+
+    // Début du drag sur une carte en main (uniquement pour le joueur local)
+    const handleDragStart = (e: React.DragEvent, index: number) => {
+        e.dataTransfer.setData('text/plain', JSON.stringify({ seatID, index }));
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    // Pour autoriser le drop sur la zone des cartes jouées
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setIsDragOver(true);
+    };
+
+    // Quand la souris quitte la zone de drop
+    const handleDragLeave = () => {
+        setIsDragOver(false);
+    };
+
+    // Réception du drop
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        try {
+            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            // Vérifier que le drop vient du même siège (sinon on ignore)
+            if (data.seatID === seatID && onCardDoubleClick) {
+                onCardDoubleClick(data.index);
+            }
+        } catch (err) {
+            console.error('Drop error:', err);
+        }
+    };
 
     // Cas 1 : siège vide avec bouton "S'asseoir" (si onSit est fourni)
     if (!isOccupied && onSit) {
@@ -61,17 +103,17 @@ const Seat: React.FC<SeatProps> = ({
         );
     }
 
-    const getTranslateX = (cardCount: number): string => {
-        // Valeurs à ajuster expérimentalement
-        const map: Record<number, string> = {
-            1: '-translate-x-[-10%]',   // 50%
-            2: '-translate-x-[20%]',
-            3: '-translate-x-[60%]',
-            4: '-translate-x-[90%]',
-            5: '-translate-x-[110%]',
-        };
-        return map[cardCount] || '-translate-x-1/2';
-    };
+    // const getTranslateX = (cardCount: number): string => {
+    //     // Valeurs à ajuster expérimentalement
+    //     const map: Record<number, string> = {
+    //         1: '-translate-x-[-10%]',   // 50%
+    //         2: '-translate-x-[20%]',
+    //         3: '-translate-x-[60%]',
+    //         4: '-translate-x-[90%]',
+    //         5: '-translate-x-[110%]',
+    //     };
+    //     return map[cardCount] || '-translate-x-1/2';
+    // };
 
     // Cas 3 : siège occupé
     return (
@@ -89,43 +131,29 @@ const Seat: React.FC<SeatProps> = ({
 
             {/* Éléments superposés (hors flux) */}
             {/* Affichage cartes visibles par un seul joueur utilisateur local */}
-            {handCardCount > 0 && showCards && (
-                <div className="absolute inset-0 pointer-events-none">
-                    {isSeatThree ? (
-                        <div className={`absolute bottom-0 flex transform shadow-xl rounded-md z-10 w-[47px] xl:w-[57px] ${getTranslateX(handCardCount)}`}>
-                            {[...Array(handCardCount)].map((_, i) => (
-                                <img key={i} src="img/cards/c3.png" className="relative shadow-xl border border-transparent border-b-white rounded-sm" alt="" />
-                            ))}
-                        </div>
-                    ) : (
-                        // cartes non visibles pour les sièges 1, 2, 4
-                        <div className={`absolute bottom-0 flex transform shadow-xl rounded-md z-10 w-[47px] xl:w-[57px] ${getTranslateX(handCardCount)}`}>
-                            {[...Array(handCardCount)].map((_, i) => (
-                                <img key={i} src="img/cards/c3.png" className="relative shadow-xl border border-transparent border-b-white rounded-sm" alt="" />
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
+            {handCards.length > 0 && (
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 flex gap-1 z-10">
+                    {handCards.map((cardKey, idx) => {
+                        const imgSrc = showCards
+                            ? cards[cardKey as keyof typeof cards] || cards.hiddenCard
+                            : cards.hiddenCard;
 
-            {/* Affichage cartes faces cachées pour les joueurs autre que le joueur utilisateur local */}
-            {handCardCount > 0 && !showCards && (
-                <div className="absolute inset-0 pointer-events-none">
-                    {isSeatThree ? (
-                        // cartes non visibles pour le siège 3
-                        <div className={`absolute bottom-0 flex transform shadow-xl rounded-md z-10 w-[47px] xl:w-[57px] ${getTranslateX(handCardCount)}`}>
-                            {[...Array(handCardCount)].map((_, i) => (
-                                <img key={i} src="img/cards/hidden-card.png" className="w-[47px] xl:w-[57px] relative shadow-xl border border-transparent border-b-white rounded-sm" alt="" />
-                            ))}
-                        </div>
-                    ) : (
-                        // cartes non visibles pour les sièges 1, 2, 4
-                        <div className={`absolute bottom-0 flex transform shadow-xl rounded-md z-10 w-[47px] xl:w-[57px] ${getTranslateX(handCardCount)}`}>
-                            {[...Array(handCardCount)].map((_, i) => (
-                                <img key={i} src="img/cards/hidden-card.png" className="relative shadow-xl border border-transparent border-b-white rounded-sm" alt="" />
-                            ))}
-                        </div>
-                    )}
+                        return showCards ? (
+                            <button
+                                key={idx}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, idx)}
+                                className="w-14 h-12 p-0 border-none bg-transparent cursor-grab hover:scale-105 transition-transform"
+                                onDoubleClick={() => onCardDoubleClick && onCardDoubleClick(idx)}
+                            >
+                                <img src={imgSrc} className="w-full h-full object-cover rounded-sm shadow-md" alt="card" />
+                            </button>
+                        ) : (
+                            <div key={idx} className="w-14 h-12">
+                                <img src={imgSrc} className="w-full h-full object-cover rounded-sm shadow-md" alt="card" />
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
@@ -136,18 +164,66 @@ const Seat: React.FC<SeatProps> = ({
             </span>
 
             {/* Cartes jouées par le joueur local visibles par tout le monde et lui même */}
-            {playedCardCount > 0 && (
-                <div className={isSeatThree ? "relative bottom-[175%]" : "relative top-[35%]"}>
-                    <p className="relative transform -translate-y-[20%] text-white text-center py-2 w-[150px] bg-[#0FAC71] shadow-md rounded-full">
-                        Mise: {seatBet ?? 0} chips
-                    </p>
-                    <div className={`flex transform shadow-md w-[47px] xl:w-[57px] ${getTranslateX(playedCardCount)} ${isSeatThree ? ' -translate-y-[40%]' : '-translate-y-[30%]'}`}>
-                        {[...Array(playedCardCount)].map((_, i) => (
-                            <img key={i} src="img/cards/c4.png" className="relative object-cover shadow-xl border border-transparent border-b-white rounded-sm" alt="" />
-                        ))}
-                    </div>
+            {/* Zone de drop et d'affichage des cartes jouées (visible uniquement pour le joueur local) */}
+            <div
+                className={`${isSeatThree ? "relative bottom-[215%] flex flex-col-reverse" : "relative top-[35%]"} ${showCards && isDragOver ? 'bg-green-200 bg-opacity-20 rounded-lg' : ''
+                    } ${showCards ? 'min-h-[80px]' : ''}`}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                {...(showCards ? {
+                    onDragOver: handleDragOver,
+                    onDragLeave: handleDragLeave,
+                    onDrop: handleDrop,
+                } : {})}
+            >
+                {/* Étiquette "Mise" */}
+                <p className="relative text-white text-center py-2 w-[150px] bg-[#0FAC71] shadow-md rounded-full">
+                    Mise: {seatBet ?? 0} chips
+                </p>
+
+                {/* Conteneur des cartes jouées */}
+                <div className="relative flex items-center justify-center w-full h-[50px]">
+                    {playedCards.length === 0 && showCards && (
+                        <div className="text-white text-xs opacity-50 italic">Déposez ici</div>
+                    )}
+
+                    {playedCards.length > 0 && (
+                        <div className={isHovered ? 'flex gap-1' : 'relative w-full h-full'}>
+                            {playedCards.map((cardKey, idx) => {
+                                const imgSrc = cards[cardKey as keyof typeof cards] || cards.hiddenCard;
+                                if (isHovered) {
+                                    // Mode déplié : toutes les cartes en ligne
+                                    return (
+                                        <img
+                                            key={idx}
+                                            src={imgSrc}
+                                            className="w-14 h-12 object-cover rounded-sm shadow-md"
+                                            style={{
+                                                transform: `${isSeatTwo && "translateX(-200%)"} ${isSeatThree && "translateX(-100%)"}`,
+                                            }}
+                                            alt="played card"
+                                        />
+                                    );
+                                } else {
+                                    // Mode pile : les cartes sont centrées et superposées
+                                    return (
+                                        <img
+                                            key={idx}
+                                            src={imgSrc}
+                                            className="absolute left-1/2 w-14 h-12 object-cover rounded-sm shadow-md"
+                                            style={{
+                                                transform: `${isSeatThree ? "translateX(-180%)" : ""} translateX(${idx * 7}px`,
+                                                zIndex: idx,
+                                            }}
+                                            alt="played card"
+                                        />
+                                    );
+                                }
+                            })}
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
         </div>
     );
 };

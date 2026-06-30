@@ -2,15 +2,15 @@
 import Seat from '@/components/Seat';
 import type TatamiProps from '@/types/Tatami';
 import { LogOut, MessageCircle, Pause, SquareArrowRightExit } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { showToast } from '@/components/CustomToast';
 import SitOnTableDialog from '@/components/dialog/SitOnTableDialog';
 import { useUser } from '@/hooks/useUser';
+// import { allCardKeys } from '@/components/Cards';
 
 const GameProgress: React.FC = () => {
 
-    // const navigate = useNavigate();
     const { user: currentUser, refreshUser } = useUser();
     const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
 
@@ -20,11 +20,18 @@ const GameProgress: React.FC = () => {
     const [isHeightAbove640, setIsHeightAbove640] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [seatBet, setSeatBet] = useState(0);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [sitOnTableDialogOpen, setSitOnTableDialogOpen] = useState(false)
     const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
     const [maxBet, setMaxBet] = useState<number>(0);
 
+    const wsRef = useRef<WebSocket | null>(null);
+
+    const [seatCards, setSeatCards] = useState<{ hand: string[], played: string[] }[]>([
+        { hand: [], played: [] },
+        { hand: [], played: [] },
+        { hand: [], played: [] },
+        { hand: [], played: [] },
+    ]);
 
 
     const [searchParams] = useSearchParams();
@@ -73,42 +80,15 @@ const GameProgress: React.FC = () => {
     // Gérer la fermeture non contrôlée (croix de l'onglet, rafraîchissement)
     useEffect(() => {
         const handleBeforeUnload = async () => {
-            // Détecter si c'est un rechargement (ne pas quitter dans ce cas)
-            const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-            if (navEntry && navEntry.type === 'reload') {
-                return; // L'utilisateur recharge la page, on ne quitte pas
-            }
-
-            // Si c'est une sortie volontaire via le bouton "Quitter", on a déjà appelé performLeave()
             const isManualLeave = sessionStorage.getItem('manualLeave');
             if (isManualLeave) {
                 sessionStorage.removeItem('manualLeave');
                 return;
             }
-
-            // Sinon, c'est une fermeture d'onglet ou de navigateur → quitter la table immédiatement
-            const token = localStorage.getItem('authToken');
-            const tableId = localStorage.getItem('currentTableID');
-            if (!token || !tableId) return;
-
-            // Envoi de la requête avec keepalive pour garantir la livraison
-            fetch(`${API_URL}/api/tables/${tableId}/leave`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` },
-                keepalive: true
-            }).catch(console.error);
-
-            // Nettoyage local (pour éviter les incohérences)
-            localStorage.removeItem('currentTatami');
-            localStorage.removeItem('currentTableID');
         };
-
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [API_URL]);
-
-    // Chargement initial de la table
-    console.log("GameProgress monté");
+    }, []);
 
     useEffect(() => {
         const fetchTable = async () => {
@@ -127,10 +107,13 @@ const GameProgress: React.FC = () => {
                 console.log("Réponse GET table:", response.status);
                 if (response.ok) {
                     const data = await response.json();
-                    console.log("Table chargée:", data.table);
                     setTatami(data.table);
+                    if (data.table.seatCards) {
+                        setSeatCards(data.table.seatCards);
+                    }
                     localStorage.setItem('currentTatami', JSON.stringify(data.table));
                 } else {
+                    // setSeatCardCounts(prev => prev.map(() => ({ hand: 0, played: 0 })));
                     console.log("Erreur chargement table, fermeture");
                     window.close();
                 }
@@ -182,12 +165,19 @@ const GameProgress: React.FC = () => {
             });
             const data = await response.json();
             if (response.ok) {
+                // Ne pas modifier localement seatCards, le serveur va générer les cartes
                 setTatami(data.table);
                 localStorage.setItem('currentTatami', JSON.stringify(data.table));
                 setSitOnTableDialogOpen(false);
                 setSelectedSeat(null);
                 showToast("Vous êtes assis avec une mise de " + amount + " chips", "success");
-                await refreshUser(); // ← crucial : recharge l’utilisateur depuis le backend
+                await refreshUser();
+
+                // Envoyer un message WebSocket pour générer les cartes
+                sendWSMessage('SIT', {
+                    tableId: tableId,
+                    seatIndex: selectedSeat - 1,
+                });
             } else {
                 showToast(data.error || "Impossible de s'asseoir", "error");
             }
@@ -202,6 +192,8 @@ const GameProgress: React.FC = () => {
         const token = localStorage.getItem('authToken');
         if (!token) return;
         const ws = new WebSocket(`ws://localhost:8080/ws?token=${encodeURIComponent(token)}`);
+        wsRef.current = ws;
+
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'TABLE_UPDATED' && data.tableId === localStorage.getItem('currentTableID')) {
@@ -216,15 +208,36 @@ const GameProgress: React.FC = () => {
                     if (response.ok) {
                         const data = await response.json();
                         setTatami(data.table);
+                        if (data.table.seatCards) {
+                            setSeatCards(data.table.seatCards);
+                        }
                         localStorage.setItem('currentTatami', JSON.stringify(data.table));
                     }
                 };
                 fetchTable();
             }
         };
+
         return () => ws.close();
     }, []);
 
+    const sendWSMessage = (type: string, payload: { tableId: string, seatIndex: number, cardIndex?: number, }) => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type, ...payload }));
+        }
+    };
+
+
+    const handleCardDoubleClick = (seatNumber: number, index: number) => {
+        const tableId = localStorage.getItem('currentTableID');
+        if (!tableId) return;
+        // Envoyer le message WebSocket pour jouer la carte
+        sendWSMessage('PLAY_CARD', {
+            tableId: tableId,
+            seatIndex: seatNumber - 1,
+            cardIndex: index,
+        });
+    };
 
     // 1. Définir les positions avec un type Record<number, string> pour éviter l’erreur d’index
     const seatPositions: Record<number, string> = {
@@ -260,13 +273,6 @@ const GameProgress: React.FC = () => {
         }
     };
 
-    // useEffect(() => {
-    //     if (currentUser === null && localStorage.getItem('authToken')) {
-    //         // Le token existe mais l’utilisateur n’a pas pu être chargé → rediriger
-    //         navigate('/login');
-    //     }
-    // }, [currentUser, navigate]);
-
     if (!tatami || !currentUser) {
         return <div className="text-center mt-20">Chargement...</div>;
     }
@@ -280,6 +286,8 @@ const GameProgress: React.FC = () => {
                     const userIdValue = seat.user_id;
                     const isOccupied = userIdValue !== 0;
                     const isCurrentUser = isOccupied && currentUser?.user_id === userIdValue;
+                    // Récupérer les compteurs pour ce siège
+                    // const counts = seatCardCounts[idx] || { hand: 0, played: 0 };
                     // Trouver l'index du joueur dans la liste players
                     const playerIndex = tatami.players?.indexOf(userIdValue);
                     const playerUsername = playerIndex !== -1 ? tatami.player_usernames?.[playerIndex] : null;
@@ -289,6 +297,7 @@ const GameProgress: React.FC = () => {
                     const showSitButton = !isOccupied && !isCurrentUserSeated;
                     // Vous pouvez afficher le montant misé (amount_at_stake) ou le remplacer par 1000 par défaut
                     const chipsAmount = seat.amount_at_stake || 0;
+
                     return (
                         <div key={seatNumber} className={seatPositions[seatNumber]}>
                             <Seat
@@ -302,10 +311,11 @@ const GameProgress: React.FC = () => {
                                     setSitOnTableDialogOpen(true);
                                 } : undefined}
                                 showCards={!!isCurrentUser}
-                                handCardCount={isOccupied ? 5 : 0}
-                                playedCardCount={isOccupied ? 5 : 0}
+                                handCards={isOccupied ? seatCards[idx]?.hand || [] : []}
+                                playedCards={isOccupied ? seatCards[idx]?.played || [] : []}
                                 isConnected={isConnected}
                                 seatBet={seatBet}
+                                onCardDoubleClick={isCurrentUser ? (index: number) => handleCardDoubleClick(seatNumber, index) : undefined}
                             />
                         </div>
                     );
