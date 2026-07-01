@@ -16,6 +16,7 @@ interface SeatProps {
     isConnected?: boolean;
     seatBet: number;
     onCardDoubleClick?: (index: number) => void;
+    dealerSeat: boolean;
 }
 
 
@@ -30,13 +31,17 @@ const Seat: React.FC<SeatProps> = ({
     playedCards = [],
     isConnected,
     seatBet,
-    onCardDoubleClick
+    onCardDoubleClick,
+    dealerSeat = false
 }) => {
 
     const [isDragOver, setIsDragOver] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
 
+    const isSeatFour = seatID === '4';
     const isSeatThree = seatID === '3';
+    // const isSeatTwo = seatID === '2';
+    const isSeatOne = seatID === '1';
 
     // Début du drag sur une carte en main (uniquement pour le joueur local)
     const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -111,6 +116,25 @@ const Seat: React.FC<SeatProps> = ({
                     <WifiOff className="w-5 h-5 text-white" />
                 </div>
             )}
+
+            {dealerSeat && isSeatOne && (
+                <div className="absolute -bottom-[85%] -left-12 rounded-full p-0.5 shadow-md z-20">
+                    <img src="img/dealer-button.svg" className="w-full h-full object-cover" alt="" />
+                </div>
+            )}
+
+            {dealerSeat && isSeatFour && (
+                <div className="absolute -top-7 -right-12 rounded-full p-0.5 shadow-md z-20">
+                    <img src="img/dealer-button.svg" className="w-full h-full object-cover" alt="" />
+                </div>
+            )}
+
+            {dealerSeat && !isSeatOne && !isSeatFour && (
+                <div className="absolute -top-7 -left-12 rounded-full p-0.5 shadow-md z-20">
+                    <img src="img/dealer-button.svg" className="w-full h-full object-cover" alt="" />
+                </div>
+            )}
+
             {/* Avatar */}
             <div className="w-full h-full bg-[#0FAC71] rounded-full shadow-xl flex items-center justify-center text-white font-bold overflow-hidden">
                 <img src="img/user-avatar.png" className="w-full h-full object-cover" alt="" />

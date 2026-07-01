@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { showToast } from '@/components/CustomToast';
 import SitOnTableDialog from '@/components/dialog/SitOnTableDialog';
 import { useUser } from '@/hooks/useUser';
+import ChatDialog from '@/components/dialog/ChatDialog';
 // import { allCardKeys } from '@/components/Cards';
 
 const GameProgress: React.FC = () => {
@@ -23,8 +24,15 @@ const GameProgress: React.FC = () => {
     const [sitOnTableDialogOpen, setSitOnTableDialogOpen] = useState(false)
     const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
     const [maxBet, setMaxBet] = useState<number>(0);
+    const [newChatMessages, setNewChatMessages] = useState(0);
+    const [openChatDialog, setOpenChatDialog] = useState(false);
+    const [chatMessages, setChatMessages] = useState<{ id: string; username: string; content: string; timestamp: string }[]>([]);
 
+    const previousMessagesLength = useRef(0);
     const wsRef = useRef<WebSocket | null>(null);
+    const readMessages = useRef<Set<string>>(new Set());
+    const chatOpenRef = useRef(false);
+    const currentUserIdRef = useRef(0);
 
     const [seatCards, setSeatCards] = useState<{ hand: string[], played: string[] }[]>([
         { hand: [], played: [] },
@@ -33,8 +41,22 @@ const GameProgress: React.FC = () => {
         { hand: [], played: [] },
     ]);
 
+    useEffect(() => {
+        if (currentUser) {
+            currentUserIdRef.current = currentUser.user_id;
+        }
+    }, [currentUser]);
 
     const [searchParams] = useSearchParams();
+
+    const sendChatMessage = (content: string) => {
+        const tableId = localStorage.getItem('currentTableID');
+        if (!tableId) return;
+        sendWSMessage('CHAT_MESSAGE', {
+            tableId: tableId,
+            content: content,
+        });
+    };
 
     // Détection de la hauteur de l'écran
     useEffect(() => {
@@ -88,41 +110,6 @@ const GameProgress: React.FC = () => {
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, []);
-
-    useEffect(() => {
-        const fetchTable = async () => {
-            const tableId = localStorage.getItem('currentTableID');
-            const token = localStorage.getItem('authToken');
-            console.log("fetchTable - tableId:", tableId, "token:", token ? "présent" : "absent");
-            if (!tableId || !token) {
-                console.log("Pas de tableId ou token, fermeture de l'onglet");
-                window.close();
-                return;
-            }
-            try {
-                const response = await fetch(`${API_URL}/api/tables/${tableId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                console.log("Réponse GET table:", response.status);
-                if (response.ok) {
-                    const data = await response.json();
-                    setTatami(data.table);
-                    if (data.table.seatCards) {
-                        setSeatCards(data.table.seatCards);
-                    }
-                    localStorage.setItem('currentTatami', JSON.stringify(data.table));
-                } else {
-                    // setSeatCardCounts(prev => prev.map(() => ({ hand: 0, played: 0 })));
-                    console.log("Erreur chargement table, fermeture");
-                    window.close();
-                }
-            } catch (err) {
-                console.error(err);
-                window.close();
-            }
-        };
-        fetchTable();
     }, []);
 
     // Fonction pour déterminer la classe de hauteur du conteneur
@@ -187,6 +174,55 @@ const GameProgress: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        const fetchTable = async () => {
+            const tableId = localStorage.getItem('currentTableID');
+            const token = localStorage.getItem('authToken');
+            console.log("fetchTable - tableId:", tableId, "token:", token ? "présent" : "absent");
+            if (!tableId || !token) {
+                console.log("Pas de tableId ou token, fermeture de l'onglet");
+                window.close();
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/api/tables/${tableId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                console.log("Réponse GET table:", response.status);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setTatami(data.table);
+
+                    if (data.table.chat_messages) {
+                        setChatMessages(data.table.chat_messages);
+                        // Marquer tous les messages comme lus si le chat est ouvert, sinon aucun
+                        if (openChatDialog) {
+                            data.table.chat_messages.forEach((msg: { id: string; username: string; content: string; timestamp: string }) => readMessages.current.add(msg.id));
+                        } else {
+                            // Sinon, on garde le Set vide
+                        }
+                        previousMessagesLength.current = data.table.chat_messages.length;
+                    }
+
+                    if (data.table.seatCards) {
+                        setSeatCards(data.table.seatCards);
+                    }
+                    localStorage.setItem('currentTatami', JSON.stringify(data.table));
+                } else {
+                    // setSeatCardCounts(prev => prev.map(() => ({ hand: 0, played: 0 })));
+                    console.log("Erreur chargement table, fermeture");
+                    window.close();
+                }
+
+            } catch (err) {
+                console.error(err);
+                window.close();
+            }
+        };
+        fetchTable();
+    }, []);
+
     // WebSocket pour les mises à jour en temps réel
     useEffect(() => {
         const token = localStorage.getItem('authToken');
@@ -197,7 +233,6 @@ const GameProgress: React.FC = () => {
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'TABLE_UPDATED' && data.tableId === localStorage.getItem('currentTableID')) {
-                // Recharger la table
                 const fetchTable = async () => {
                     const tableId = localStorage.getItem('currentTableID');
                     const token = localStorage.getItem('authToken');
@@ -205,9 +240,42 @@ const GameProgress: React.FC = () => {
                     const response = await fetch(`${API_URL}/api/tables/${tableId}`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
+
                     if (response.ok) {
                         const data = await response.json();
                         setTatami(data.table);
+                        if (data.table.chat_messages) {
+                            const newMessages = data.table.chat_messages;
+                            setChatMessages(newMessages);
+                            const newLength = newMessages.length;
+
+                            if (chatOpenRef.current) {
+                                // Chat ouvert : marquer tous les nouveaux messages comme lus
+                                for (let i = previousMessagesLength.current; i < newLength; i++) {
+                                    readMessages.current.add(newMessages[i].id);
+                                }
+                                setNewChatMessages(0);
+                                previousMessagesLength.current = newLength;
+                            } else {
+                                // Chat fermé : compter les messages non lus (expéditeur différent)
+                                if (newLength > previousMessagesLength.current) {
+                                    let count = 0;
+                                    for (let i = previousMessagesLength.current; i < newLength; i++) {
+                                        const msg = newMessages[i];
+                                        if (!readMessages.current.has(msg.id) && msg.user_id !== currentUserIdRef.current) {
+                                            count++;
+                                            // On ne les marque pas encore comme lus, car ils ne sont pas encore vus
+                                        }
+                                    }
+                                    if (count > 0) {
+                                        setNewChatMessages(prev => prev + count);
+                                    }
+                                    // Mettre à jour previousMessagesLength pour éviter de recompter
+                                    previousMessagesLength.current = newLength;
+                                }
+                            }
+                        }
+
                         if (data.table.seatCards) {
                             setSeatCards(data.table.seatCards);
                         }
@@ -221,7 +289,21 @@ const GameProgress: React.FC = () => {
         return () => ws.close();
     }, []);
 
-    const sendWSMessage = (type: string, payload: { tableId: string, seatIndex: number, cardIndex?: number, }) => {
+    const handleOpenChat = () => {
+        setOpenChatDialog(true);
+        chatOpenRef.current = true;
+        // Marquer tous les messages comme lus
+        chatMessages.forEach(msg => readMessages.current.add(msg.id));
+        setNewChatMessages(0);
+        previousMessagesLength.current = chatMessages.length;
+    };
+
+    const handleCloseChat = () => {
+        setOpenChatDialog(false);
+        chatOpenRef.current = false;
+    };
+
+    const sendWSMessage = (type: string, payload: { tableId: string, seatIndex?: number, cardIndex?: number, content?: string }) => {
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
             wsRef.current.send(JSON.stringify({ type, ...payload }));
         }
@@ -316,6 +398,7 @@ const GameProgress: React.FC = () => {
                                 isConnected={isConnected}
                                 seatBet={seatBet}
                                 onCardDoubleClick={isCurrentUser ? (index: number) => handleCardDoubleClick(seatNumber, index) : undefined}
+                                dealerSeat={false}
                             />
                         </div>
                     );
@@ -325,7 +408,7 @@ const GameProgress: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen grid grid-cols-1 bg-green-gradient font-suse overflow-y-auto justify-between">
+        <div className="min-h-screen grid grid-cols-1 bg-green-gradient font-suse overflow-y-auto justify-between w-full">
             <div className="mb-14">
                 <div className={`${getContainerHeightClass()}`}>
                     <div className={`flex items-center justify-center m-2 min-w-[55em] overflow-auto ${getContainerAnotherHeightClass()}`}>
@@ -393,15 +476,30 @@ const GameProgress: React.FC = () => {
                 maxAmount={maxBet}
             />
 
+            <ChatDialog
+                open={openChatDialog}
+                messages={chatMessages}
+                onSendMessage={sendChatMessage}
+                onCancel={handleCloseChat}
+            />
+
             {/* Barre d'actions en bas */}
             <div className="flex min-w-[55em]">
                 <div className="bg-green-gradient backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap shadow-xl rounded-xl mb-8 mt-14 mx-auto">
-                    <button className="hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-full transition duration-200 shadow-lg">
-                        <MessageCircle className="w-4 h-4" />
+                    <button
+                        onClick={handleOpenChat}
+                        className="relative hover:bg-[#0FAC71] text-white font-semibold py-2 px-4 rounded-full transition duration-200 shadow-lg"
+                    >
+                        {newChatMessages > 0 && (
+                            <div className="absolute -top-1 -right-1 bg-red-600 rounded-full px-2.5 py-0.5 shadow-md z-20 text-xs">
+                                {newChatMessages}
+                            </div>
+                        )}
+                        <MessageCircle className="w-5 h-5" />
                     </button>
                     <button className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
                         <Pause className="w-4 h-4 me-2" />
-                        <span>Se mettre en pause</span>
+                        <span>Pause</span>
                     </button>
 
                     {/* Bouton Se lever (conditionnel) */}
