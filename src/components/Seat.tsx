@@ -16,7 +16,7 @@ interface SeatProps {
     isConnected?: boolean;
     seatBet: number;
     onCardDoubleClick?: (index: number) => void;
-    dealerSeat: boolean;
+    isDealer?: boolean;
 }
 
 
@@ -32,7 +32,7 @@ const Seat: React.FC<SeatProps> = ({
     isConnected,
     seatBet,
     onCardDoubleClick,
-    dealerSeat = false
+    isDealer = false
 }) => {
 
     const [isDragOver, setIsDragOver] = useState(false);
@@ -117,19 +117,19 @@ const Seat: React.FC<SeatProps> = ({
                 </div>
             )}
 
-            {dealerSeat && isSeatOne && (
+            {isDealer && isSeatOne && (
                 <div className="absolute -bottom-[85%] -left-12 rounded-full p-0.5 shadow-md z-20">
                     <img src="img/dealer-button.svg" className="w-full h-full object-cover" alt="" />
                 </div>
             )}
 
-            {dealerSeat && isSeatFour && (
+            {isDealer && isSeatFour && (
                 <div className="absolute -top-7 -right-12 rounded-full p-0.5 shadow-md z-20">
                     <img src="img/dealer-button.svg" className="w-full h-full object-cover" alt="" />
                 </div>
             )}
 
-            {dealerSeat && !isSeatOne && !isSeatFour && (
+            {isDealer && !isSeatOne && !isSeatFour && (
                 <div className="absolute -top-7 -left-12 rounded-full p-0.5 shadow-md z-20">
                     <img src="img/dealer-button.svg" className="w-full h-full object-cover" alt="" />
                 </div>

@@ -160,11 +160,6 @@ const GameProgress: React.FC = () => {
                 showToast("Vous êtes assis avec une mise de " + amount + " chips", "success");
                 await refreshUser();
 
-                // Envoyer un message WebSocket pour générer les cartes
-                sendWSMessage('SIT', {
-                    tableId: tableId,
-                    seatIndex: selectedSeat - 1,
-                });
             } else {
                 showToast(data.error || "Impossible de s'asseoir", "error");
             }
@@ -379,6 +374,7 @@ const GameProgress: React.FC = () => {
                     const showSitButton = !isOccupied && !isCurrentUserSeated;
                     // Vous pouvez afficher le montant misé (amount_at_stake) ou le remplacer par 1000 par défaut
                     const chipsAmount = seat.amount_at_stake || 0;
+                    const isDealer = tatami?.dealer_seat_index === idx;
 
                     return (
                         <div key={seatNumber} className={seatPositions[seatNumber]}>
@@ -398,7 +394,7 @@ const GameProgress: React.FC = () => {
                                 isConnected={isConnected}
                                 seatBet={seatBet}
                                 onCardDoubleClick={isCurrentUser ? (index: number) => handleCardDoubleClick(seatNumber, index) : undefined}
-                                dealerSeat={false}
+                                isDealer={isDealer}
                             />
                         </div>
                     );

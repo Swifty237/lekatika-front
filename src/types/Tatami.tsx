@@ -12,7 +12,7 @@ export default interface TatamiProps {
     created_at: string;
     seats: { user_id: number; amount_at_stake: number }[];
     seats_connected: boolean[];
-    dealer: string;
+    dealer_seat_index: number;
     turn: string;
     last_winning_seat: string;
     last_round_winner: string;
