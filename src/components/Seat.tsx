@@ -37,7 +37,6 @@ const Seat: React.FC<SeatProps> = ({
     const [isHovered, setIsHovered] = useState(false);
 
     const isSeatThree = seatID === '3';
-    const isSeatTwo = seatID === '2';
 
     // Début du drag sur une carte en main (uniquement pour le joueur local)
     const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -103,18 +102,6 @@ const Seat: React.FC<SeatProps> = ({
         );
     }
 
-    // const getTranslateX = (cardCount: number): string => {
-    //     // Valeurs à ajuster expérimentalement
-    //     const map: Record<number, string> = {
-    //         1: '-translate-x-[-10%]',   // 50%
-    //         2: '-translate-x-[20%]',
-    //         3: '-translate-x-[60%]',
-    //         4: '-translate-x-[90%]',
-    //         5: '-translate-x-[110%]',
-    //     };
-    //     return map[cardCount] || '-translate-x-1/2';
-    // };
-
     // Cas 3 : siège occupé
     return (
         <div id={seatID} className="relative w-20 h-20">
@@ -166,7 +153,7 @@ const Seat: React.FC<SeatProps> = ({
             {/* Cartes jouées par le joueur local visibles par tout le monde et lui même */}
             {/* Zone de drop et d'affichage des cartes jouées (visible uniquement pour le joueur local) */}
             <div
-                className={`${isSeatThree ? "relative bottom-[215%] flex flex-col-reverse" : "relative top-[35%]"} ${showCards && isDragOver ? 'bg-green-200 bg-opacity-20 rounded-lg' : ''
+                className={`${isSeatThree ? "relative bottom-[257%] flex flex-col-reverse" : "relative top-[35%]"} ${showCards && isDragOver ? 'bg-green-200 bg-opacity-20 rounded-lg' : ''
                     } ${showCards ? 'min-h-[80px]' : ''}`}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
@@ -182,13 +169,13 @@ const Seat: React.FC<SeatProps> = ({
                 </p>
 
                 {/* Conteneur des cartes jouées */}
-                <div className="relative flex items-center justify-center w-full h-[50px]">
+                <div className={`relative mt-7`}>
                     {playedCards.length === 0 && showCards && (
                         <div className="text-white text-xs opacity-50 italic">Déposez ici</div>
                     )}
 
                     {playedCards.length > 0 && (
-                        <div className={isHovered ? 'flex gap-1' : 'relative w-full h-full'}>
+                        <div className={`flex justify-center items-center ${isSeatThree ? 'h-[55px]' : 'h-[1px]'}`}>
                             {playedCards.map((cardKey, idx) => {
                                 const imgSrc = cards[cardKey as keyof typeof cards] || cards.hiddenCard;
                                 if (isHovered) {
@@ -198,9 +185,6 @@ const Seat: React.FC<SeatProps> = ({
                                             key={idx}
                                             src={imgSrc}
                                             className="w-14 h-12 object-cover rounded-sm shadow-md"
-                                            style={{
-                                                transform: `${isSeatTwo && "translateX(-200%)"} ${isSeatThree && "translateX(-100%)"}`,
-                                            }}
                                             alt="played card"
                                         />
                                     );
@@ -210,9 +194,9 @@ const Seat: React.FC<SeatProps> = ({
                                         <img
                                             key={idx}
                                             src={imgSrc}
-                                            className="absolute left-1/2 w-14 h-12 object-cover rounded-sm shadow-md"
+                                            className="absolute w-14 h-12 object-cover rounded-sm shadow-md"
                                             style={{
-                                                transform: `${isSeatThree ? "translateX(-180%)" : ""} translateX(${idx * 7}px`,
+                                                transform: `translateX(${idx * 7}px`,
                                                 zIndex: idx,
                                             }}
                                             alt="played card"
