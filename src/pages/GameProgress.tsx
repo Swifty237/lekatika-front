@@ -279,6 +279,30 @@ const GameProgress: React.FC = () => {
                 };
                 fetchTable();
             }
+
+            if (data.type === 'GAME_STARTING' && data.tableId === localStorage.getItem('currentTableID')) {
+                setTimeout(() => {
+                    showToast('Début de partie !', 'success');
+                }, 3000);
+            }
+
+            if (data.type === 'DEAL' && data.tableId === localStorage.getItem('currentTableID')) {
+                const { seatIndex, cards } = data;
+                setSeatCards(prev => {
+                    const newSeatCards = [...prev];
+                    if (newSeatCards[seatIndex]) {
+                        newSeatCards[seatIndex] = {
+                            ...newSeatCards[seatIndex],
+                            hand: [...newSeatCards[seatIndex].hand, ...cards],
+                        };
+                    }
+                    return newSeatCards;
+                });
+            }
+
+            if (data.type === 'GAME_EVENT' && data.tableId === localStorage.getItem('currentTableID')) {
+                showToast(data.message, 'success');
+            }
         };
 
         return () => ws.close();
@@ -363,16 +387,12 @@ const GameProgress: React.FC = () => {
                     const userIdValue = seat.user_id;
                     const isOccupied = userIdValue !== 0;
                     const isCurrentUser = isOccupied && currentUser?.user_id === userIdValue;
-                    // Récupérer les compteurs pour ce siège
-                    // const counts = seatCardCounts[idx] || { hand: 0, played: 0 };
-                    // Trouver l'index du joueur dans la liste players
                     const playerIndex = tatami.players?.indexOf(userIdValue);
                     const playerUsername = playerIndex !== -1 ? tatami.player_usernames?.[playerIndex] : null;
                     const occupantName = isOccupied
                         ? (isCurrentUser ? currentUser.username : playerUsername || `Joueur ${userIdValue}`)
                         : undefined;
                     const showSitButton = !isOccupied && !isCurrentUserSeated;
-                    // Vous pouvez afficher le montant misé (amount_at_stake) ou le remplacer par 1000 par défaut
                     const chipsAmount = seat.amount_at_stake || 0;
                     const isDealer = tatami?.dealer_seat_index === idx;
 

@@ -195,7 +195,7 @@ const Seat: React.FC<SeatProps> = ({
                 {/* Conteneur des cartes jouées */}
                 <div className={`relative mt-7`}>
                     {playedCards.length === 0 && showCards && (
-                        <div className="text-white text-xs opacity-50 italic">Déposez ici</div>
+                        <div className={`text-white text-xs opacity-50 italic`}>Déposez ici</div>
                     )}
 
                     {playedCards.length > 0 && (
