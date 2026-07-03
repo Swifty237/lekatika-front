@@ -25,7 +25,7 @@ const JoinTable: React.FC = () => {
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    localStorage.setItem('currentTableId', data.table.id);
+                    sessionStorage.setItem('currentTableID', data.table.id);
                     navigate('/game-progress');
                 } else {
                     const error = await response.json();

@@ -87,7 +87,7 @@ const Lobby: React.FC = () => {
             const result = await response.json();
 
             if (response.ok) {
-                localStorage.setItem('currentTableID', result.table.id);
+                sessionStorage.setItem('currentTableID', result.table.id);
                 fetchTables(); // rafraîchir la liste des tables
 
                 newTab.location.href = `/game-progress?tableId=${result.table.id}`;
@@ -151,7 +151,7 @@ const Lobby: React.FC = () => {
 
             if (response.ok) {
                 console.log("Table créée, ID:", result.table.id);
-                localStorage.setItem('currentTableID', result.table.id);
+                sessionStorage.setItem('currentTableID', result.table.id);
                 await fetchTables();
                 console.log("Ouverture de l'onglet vers /game-progress");
                 newTab.location.href = `/game-progress?tableId=${result.table.id}`;

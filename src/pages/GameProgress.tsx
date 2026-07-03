@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import Seat from '@/components/Seat';
 import type TatamiProps from '@/types/Tatami';
-import { LogOut, MessageCircle, Pause, SquareArrowRightExit } from 'lucide-react';
+import { Dice3, LogOut, MessageCircleMore, Pause, SquareArrowRightExit, Gift } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { showToast } from '@/components/CustomToast';
@@ -19,11 +19,10 @@ const GameProgress: React.FC = () => {
     const [isHeightAbove1200, setIsHeightAbove1200] = useState(false);
     const [isHeightAbove800, setIsHeightAbove800] = useState(false);
     const [isHeightAbove640, setIsHeightAbove640] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [seatBet, setSeatBet] = useState(0);
     const [sitOnTableDialogOpen, setSitOnTableDialogOpen] = useState(false)
     const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
-    const [maxBet, setMaxBet] = useState<number>(0);
+    const [maxAmountAtStake, setAmountAtStake] = useState<number>(0);
     const [newChatMessages, setNewChatMessages] = useState(0);
     const [openChatDialog, setOpenChatDialog] = useState(false);
     const [chatMessages, setChatMessages] = useState<{ id: string; username: string; content: string; timestamp: string }[]>([]);
@@ -50,7 +49,7 @@ const GameProgress: React.FC = () => {
     const [searchParams] = useSearchParams();
 
     const sendChatMessage = (content: string) => {
-        const tableId = localStorage.getItem('currentTableID');
+        const tableId = sessionStorage.getItem('currentTableID');
         if (!tableId) return;
         sendWSMessage('CHAT_MESSAGE', {
             tableId: tableId,
@@ -74,7 +73,7 @@ const GameProgress: React.FC = () => {
     // Fonction centrale pour quitter la table
     const performLeave = async () => {
         const token = localStorage.getItem('authToken');
-        const tableId = localStorage.getItem('currentTableID');
+        const tableId = sessionStorage.getItem('currentTableID');
         if (!token || !tableId) return;
 
         try {
@@ -86,7 +85,7 @@ const GameProgress: React.FC = () => {
             console.error("Erreur réseau lors du départ:", err);
         } finally {
             localStorage.removeItem('currentTatami');
-            localStorage.removeItem('currentTableID');
+            sessionStorage.removeItem('currentTableID');
             localStorage.setItem('tablesUpdate', Date.now().toString());
         }
     };
@@ -131,7 +130,7 @@ const GameProgress: React.FC = () => {
         // Si un tableId est fourni dans l'URL, on le stocke
         const tableIdFromUrl = searchParams.get('tableId');
         if (tableIdFromUrl) {
-            localStorage.setItem('currentTableID', tableIdFromUrl);
+            sessionStorage.setItem('currentTableID', tableIdFromUrl);
             // Optionnel : nettoyer l'URL
             window.history.replaceState({}, '', '/game-progress');
         }
@@ -139,7 +138,7 @@ const GameProgress: React.FC = () => {
 
     const handleSitWithAmount = async (amount: number) => {
         const token = localStorage.getItem('authToken');
-        const tableId = localStorage.getItem('currentTableID');
+        const tableId = sessionStorage.getItem('currentTableID');
         if (!token || !tableId || selectedSeat === null) return;
         try {
             const response = await fetch(`${API_URL}/api/tables/${tableId}/sit/${selectedSeat}`, {
@@ -171,7 +170,7 @@ const GameProgress: React.FC = () => {
 
     useEffect(() => {
         const fetchTable = async () => {
-            const tableId = localStorage.getItem('currentTableID');
+            const tableId = sessionStorage.getItem('currentTableID');
             const token = localStorage.getItem('authToken');
             console.log("fetchTable - tableId:", tableId, "token:", token ? "présent" : "absent");
             if (!tableId || !token) {
@@ -227,9 +226,9 @@ const GameProgress: React.FC = () => {
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            if (data.type === 'TABLE_UPDATED' && data.tableId === localStorage.getItem('currentTableID')) {
+            if (data.type === 'TABLE_UPDATED' && data.tableId === sessionStorage.getItem('currentTableID')) {
                 const fetchTable = async () => {
-                    const tableId = localStorage.getItem('currentTableID');
+                    const tableId = sessionStorage.getItem('currentTableID');
                     const token = localStorage.getItem('authToken');
                     if (!tableId || !token) return;
                     const response = await fetch(`${API_URL}/api/tables/${tableId}`, {
@@ -280,13 +279,13 @@ const GameProgress: React.FC = () => {
                 fetchTable();
             }
 
-            if (data.type === 'GAME_STARTING' && data.tableId === localStorage.getItem('currentTableID')) {
+            if (data.type === 'GAME_STARTING' && data.tableId === sessionStorage.getItem('currentTableID')) {
                 setTimeout(() => {
                     showToast('Début de partie !', 'success');
                 }, 3000);
             }
 
-            if (data.type === 'DEAL' && data.tableId === localStorage.getItem('currentTableID')) {
+            if (data.type === 'DEAL' && data.tableId === sessionStorage.getItem('currentTableID')) {
                 const { seatIndex, cards } = data;
                 setSeatCards(prev => {
                     const newSeatCards = [...prev];
@@ -300,8 +299,36 @@ const GameProgress: React.FC = () => {
                 });
             }
 
-            if (data.type === 'GAME_EVENT' && data.tableId === localStorage.getItem('currentTableID')) {
-                showToast(data.message, 'success');
+            if (data.type === 'GAME_EVENT') {
+                // Si c'est un message privé, il n'a pas de tableId, on l'affiche directement
+                // Si c'est un message public, il a tableId et on vérifie
+                if (!data.tableId || data.tableId === sessionStorage.getItem('currentTableID')) {
+                    showToast(data.message, data.isError ? 'error' : 'success');
+                }
+            }
+
+            if (data.type === 'SEAT_BET_UPDATE' && data.tableId === sessionStorage.getItem('currentTableID')) {
+                const { seatIndex, newAmountAtStake, seatBet } = data;
+                // Mettre à jour le seatBet global
+                setSeatBet(seatBet);
+                // Mettre à jour le montant du siège (pour l'affichage)
+                setTatami(prev => {
+                    if (!prev) return prev;
+                    const newSeats = [...prev.seats];
+                    if (newSeats[seatIndex]) {
+                        newSeats[seatIndex] = {
+                            ...newSeats[seatIndex],
+                            amount_at_stake: newAmountAtStake,
+                        };
+                    }
+                    return { ...prev, seats: newSeats };
+                });
+            }
+
+            if (data.type === 'POT_UPDATE' && data.tableId === sessionStorage.getItem('currentTableID')) {
+                const { pot, seatBet } = data;
+                setSeatBet(seatBet);
+                setTatami(prev => prev ? { ...prev, pot } : prev);
             }
         };
 
@@ -323,14 +350,22 @@ const GameProgress: React.FC = () => {
     };
 
     const sendWSMessage = (type: string, payload: { tableId: string, seatIndex?: number, cardIndex?: number, content?: string }) => {
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type, ...payload }));
+        const ws = wsRef.current;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type, ...payload }));
+        } else {
+            // Option 1 : attendre l'ouverture (promesse)
+            // Option 2 : recréer la connexion WebSocket
+            console.warn("WebSocket non prête, tentative de reconnexion...");
+            // Vous pouvez ici réinitialiser la WebSocket
+            // Pour l'instant, on affiche un toast d'erreur
+            showToast("Connexion WebSocket perdue, réessayez", "error");
         }
     };
 
 
     const handleCardDoubleClick = (seatNumber: number, index: number) => {
-        const tableId = localStorage.getItem('currentTableID');
+        const tableId = sessionStorage.getItem('currentTableID');
         if (!tableId) return;
         // Envoyer le message WebSocket pour jouer la carte
         sendWSMessage('PLAY_CARD', {
@@ -350,7 +385,7 @@ const GameProgress: React.FC = () => {
 
     const handleUnseat = async () => {
         const token = localStorage.getItem('authToken');
-        const tableId = localStorage.getItem('currentTableID');
+        const tableId = sessionStorage.getItem('currentTableID');
         if (!token || !tableId) return;
         try {
             const response = await fetch(`${API_URL}/api/tables/${tableId}/unseat`, {
@@ -374,6 +409,25 @@ const GameProgress: React.FC = () => {
         }
     };
 
+    const handleThreeSeven = () => {
+        const tableId = sessionStorage.getItem('currentTableID');
+        if (!tableId) return;
+        const seatIndex = tatami?.seats?.findIndex(seat => seat.user_id === currentUser?.user_id);
+        if (seatIndex === undefined || seatIndex === -1) {
+            showToast("Vous n'êtes pas assis", "error");
+            return;
+        }
+        if (!tatami || tatami.current_round === 0) {
+            showToast("Aucune manche en cours", "error");
+            return;
+        }
+        console.log("Envoi de CHECK_THREE_SEVEN pour table:", tableId, "seatIndex:", seatIndex);
+        sendWSMessage('CHECK_THREE_SEVEN', {
+            tableId: tableId,
+            seatIndex: seatIndex,
+        });
+    };
+
     if (!tatami || !currentUser) {
         return <div className="text-center mt-20">Chargement...</div>;
     }
@@ -393,7 +447,7 @@ const GameProgress: React.FC = () => {
                         ? (isCurrentUser ? currentUser.username : playerUsername || `Joueur ${userIdValue}`)
                         : undefined;
                     const showSitButton = !isOccupied && !isCurrentUserSeated;
-                    const chipsAmount = seat.amount_at_stake || 0;
+                    const chipsAmount = seat.amount_at_stake;
                     const isDealer = tatami?.dealer_seat_index === idx;
 
                     return (
@@ -405,7 +459,7 @@ const GameProgress: React.FC = () => {
                                 chips={chipsAmount}
                                 onSit={showSitButton ? () => {
                                     setSelectedSeat(seatNumber);
-                                    setMaxBet(currentUser?.free_chips_amount_bankroll || 0);
+                                    setAmountAtStake(currentUser?.free_chips_amount_bankroll || 0);
                                     setSitOnTableDialogOpen(true);
                                 } : undefined}
                                 showCards={!!isCurrentUser}
@@ -435,7 +489,7 @@ const GameProgress: React.FC = () => {
                                     {renderSeats()}
                                     <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
                                         <p className="text-sm pb-2">{tatami.name}</p>
-                                        <p>Pot : 0 Chips</p>
+                                        <p>Pot : {tatami.pot} Chips</p>
                                     </div>
                                 </div>
                             </div>
@@ -449,7 +503,7 @@ const GameProgress: React.FC = () => {
                                     {renderSeats()}
                                     <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
                                         <p className="text-sm pb-2">{tatami.name}</p>
-                                        <p>Pot : 0 Chips</p>
+                                        <p>Pot : {tatami.pot} Chips</p>
                                     </div>
                                 </div>
                             </div>
@@ -462,7 +516,7 @@ const GameProgress: React.FC = () => {
                                     {renderSeats()}
                                     <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
                                         <p className="text-sm pb-2">{tatami.name}</p>
-                                        <p>Pot : 0 Chips</p>
+                                        <p>Pot : {tatami.pot} Chips</p>
                                     </div>
                                 </div>
                             </div>
@@ -476,7 +530,7 @@ const GameProgress: React.FC = () => {
                                     {renderSeats()}
                                     <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
                                         <p className="text-sm pb-2">{tatami.name}</p>
-                                        <p>Pot : 0 Chips</p>
+                                        <p>Pot : {tatami.pot} Chips</p>
                                     </div>
                                 </div>
                             </div>
@@ -489,7 +543,7 @@ const GameProgress: React.FC = () => {
                 open={sitOnTableDialogOpen}
                 onConfirm={handleSitWithAmount} // ← on passe la fonction complète
                 onCancel={() => setSitOnTableDialogOpen(false)}
-                maxAmount={maxBet}
+                maxAmount={maxAmountAtStake}
             />
 
             <ChatDialog
@@ -511,8 +565,22 @@ const GameProgress: React.FC = () => {
                                 {newChatMessages}
                             </div>
                         )}
-                        <MessageCircle className="w-5 h-5" />
+                        <MessageCircleMore className="w-5 h-5" />
                     </button>
+
+                    <button
+                        onClick={handleThreeSeven}
+                        className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg"
+                    >
+                        <Dice3 className="w-4 h-4 me-2" />
+                        <span>3 sept</span>
+                    </button>
+
+                    <button className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
+                        <Gift className="w-4 h-4 me-2" />
+                        <span>Tia</span>
+                    </button>
+
                     <button className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
                         <Pause className="w-4 h-4 me-2" />
                         <span>Pause</span>

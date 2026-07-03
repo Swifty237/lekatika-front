@@ -3,7 +3,7 @@ export default interface TatamiProps {
     name: string;
     is_private: boolean;
     paid_33: boolean
-    bet: string
+    bet: number
     created_by: string;
     is_real_money: boolean;
     status: string;
@@ -16,7 +16,7 @@ export default interface TatamiProps {
     turn: string;
     last_winning_seat: string;
     last_round_winner: string;
-    pot: string;
+    pot: number;
     hand_over: boolean;
     hand_completed: boolean;
     win_messages: [];
@@ -32,6 +32,7 @@ export default interface TatamiProps {
     on_turn_changed: [];
     chat_room: [];
     invite_link: string;
+    current_round: number;     // 0 = pas de manche en cours, 1..5
 }
 
 export default interface NormalizedTatamiProps {
@@ -40,7 +41,7 @@ export default interface NormalizedTatamiProps {
     type: boolean;
     realMoney: boolean;
     paid33: boolean;
-    bet: string;
+    bet: number;
     players: number[];
     seatsConnected: boolean[];
 }
