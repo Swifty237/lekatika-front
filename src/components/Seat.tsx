@@ -177,7 +177,7 @@ const Seat: React.FC<SeatProps> = ({
             {/* Cartes jouées par le joueur local visibles par tout le monde et lui même */}
             {/* Zone de drop et d'affichage des cartes jouées (visible uniquement pour le joueur local) */}
             <div
-                className={`${isSeatThree ? "relative bottom-[257%] flex flex-col-reverse" : "relative top-[35%]"} ${showCards && isDragOver ? 'bg-green-200 bg-opacity-20 rounded-lg' : ''
+                className={`${isSeatThree ? "relative bottom-[235%] flex flex-col-reverse" : "relative top-[35%]"} ${showCards && isDragOver ? 'bg-green-200 bg-opacity-20 rounded-lg' : ''
                     } ${showCards ? 'min-h-[80px]' : ''}`}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
@@ -188,8 +188,8 @@ const Seat: React.FC<SeatProps> = ({
                 } : {})}
             >
                 {/* Étiquette "Mise" */}
-                <p className="relative text-white text-center py-2 w-[150px] bg-[#0FAC71] shadow-md rounded-full">
-                    Mise: {seatBet ?? 0} chips
+                <p className="relative text-white text-center w-[150px]">
+                    Mise: {seatBet ?? 0}
                 </p>
 
                 {/* Conteneur des cartes jouées */}

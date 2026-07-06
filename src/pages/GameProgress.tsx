@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import Seat from '@/components/Seat';
 import type TatamiProps from '@/types/Tatami';
-import { Dice3, LogOut, MessageCircleMore, Pause, SquareArrowRightExit, Gift } from 'lucide-react';
+import { MessageCircleMore, Pause, Blocks, Power, ChevronsUp } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { showToast } from '@/components/CustomToast';
@@ -226,6 +226,12 @@ const GameProgress: React.FC = () => {
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
+
+            if (data.type === 'ERROR') {
+                showToast(data.message, 'error');
+                return;
+            }
+
             if (data.type === 'TABLE_UPDATED' && data.tableId === sessionStorage.getItem('currentTableID')) {
                 const fetchTable = async () => {
                     const tableId = sessionStorage.getItem('currentTableID');
@@ -237,6 +243,7 @@ const GameProgress: React.FC = () => {
 
                     if (response.ok) {
                         const data = await response.json();
+                        console.log("TABLE_UPDATED - three_seven_seat:", data.table.three_seven_seat);
                         setTatami(data.table);
                         if (data.table.chat_messages) {
                             const newMessages = data.table.chat_messages;
@@ -428,6 +435,43 @@ const GameProgress: React.FC = () => {
         });
     };
 
+    const handleTia = () => {
+        const tableId = sessionStorage.getItem('currentTableID');
+        if (!tableId) return;
+        const seatIndex = tatami?.seats?.findIndex(seat => seat.user_id === currentUser?.user_id);
+        if (seatIndex === undefined || seatIndex === -1) {
+            showToast("Vous n'êtes pas assis", "error");
+            return;
+        }
+        if (!tatami || tatami.current_round === 0) {
+            showToast("Aucune manche en cours", "error");
+            return;
+        }
+        console.log("Envoi de CHECK_TIA pour table:", tableId, "seatIndex:", seatIndex);
+        sendWSMessage('CHECK_TIA', {
+            tableId: tableId,
+            seatIndex: seatIndex,
+        });
+    };
+
+    const handleSquare = () => {
+        const tableId = sessionStorage.getItem('currentTableID');
+        if (!tableId) return;
+        const seatIndex = tatami?.seats?.findIndex(seat => seat.user_id === currentUser?.user_id);
+        if (seatIndex === undefined || seatIndex === -1) {
+            showToast("Vous n'êtes pas assis", "error");
+            return;
+        }
+        if (!tatami || tatami.current_round === 0) {
+            showToast("Aucune manche en cours", "error");
+            return;
+        }
+        sendWSMessage('CHECK_SQUARE', {
+            tableId: tableId,
+            seatIndex: seatIndex,
+        });
+    };
+
     if (!tatami || !currentUser) {
         return <div className="text-center mt-20">Chargement...</div>;
     }
@@ -449,6 +493,8 @@ const GameProgress: React.FC = () => {
                     const showSitButton = !isOccupied && !isCurrentUserSeated;
                     const chipsAmount = seat.amount_at_stake;
                     const isDealer = tatami?.dealer_seat_index === idx;
+                    const isRevealed = tatami.revealedSeats && tatami.revealedSeats[idx] === true;
+                    const showCards = isCurrentUser || isRevealed;
 
                     return (
                         <div key={seatNumber} className={seatPositions[seatNumber]}>
@@ -462,7 +508,7 @@ const GameProgress: React.FC = () => {
                                     setAmountAtStake(currentUser?.free_chips_amount_bankroll || 0);
                                     setSitOnTableDialogOpen(true);
                                 } : undefined}
-                                showCards={!!isCurrentUser}
+                                showCards={showCards}
                                 handCards={isOccupied ? seatCards[idx]?.hand || [] : []}
                                 playedCards={isOccupied ? seatCards[idx]?.played || [] : []}
                                 isConnected={isConnected}
@@ -567,36 +613,53 @@ const GameProgress: React.FC = () => {
                         )}
                         <MessageCircleMore className="w-5 h-5" />
                     </button>
+                </div>
 
-                    <button
-                        onClick={handleThreeSeven}
-                        className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg"
-                    >
-                        <Dice3 className="w-4 h-4 me-2" />
-                        <span>3 sept</span>
-                    </button>
-
-                    <button className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                        <Gift className="w-4 h-4 me-2" />
-                        <span>Tia</span>
-                    </button>
-
-                    <button className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                        <Pause className="w-4 h-4 me-2" />
-                        <span>Pause</span>
-                    </button>
-
-                    {/* Bouton Se lever (conditionnel) */}
-                    {tatami.seats?.some(seat => seat.user_id === currentUser?.user_id) && (
-                        <button onClick={handleUnseat} className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                            <LogOut className="w-4 h-4 me-2" />
-                            <span>Se lever</span>
+                {tatami.seats?.some(seat => seat.user_id === currentUser?.user_id) && (
+                    <div className="bg-green-gradient backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap shadow-xl rounded-xl mb-8 mt-14 mx-auto">
+                        <button
+                            onClick={handleSquare}
+                            className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg"
+                        >
+                            <Blocks className="w-4 h-4" />
+                            <span>Carré</span>
                         </button>
+
+                        <button
+                            onClick={handleThreeSeven}
+                            className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg"
+                        >
+                            <span>7 7 7</span>
+                        </button>
+
+                        <button
+                            onClick={handleTia}
+                            className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg"
+                        >
+                            <span>TIA</span>
+                        </button>
+                    </div>
+                )}
+                <div className="bg-green-gradient backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap shadow-xl rounded-xl mb-8 mt-14 mx-auto">
+                    {tatami.seats?.some(seat => seat.user_id === currentUser?.user_id) && (
+                        <>
+                            <button className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
+                                <Pause className="w-4 h-4" />
+                                {/* <span>Pause</span> */}
+                            </button>
+
+                            {/* Bouton Se lever (conditionnel) */}
+
+                            <button onClick={handleUnseat} className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
+                                <ChevronsUp className="w-4 h-4" />
+                                <span>Se lever</span>
+                            </button>
+                        </>
                     )}
 
                     <button onClick={handleLeaveTatami} className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                        <SquareArrowRightExit className="w-4 h-4 me-2" />
-                        <span>Quitter</span>
+                        <Power className="w-4 h-4" />
+                        {/* <span>Quitter</span> */}
                     </button>
                 </div>
             </div>

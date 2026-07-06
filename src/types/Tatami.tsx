@@ -16,6 +16,7 @@ export default interface TatamiProps {
     turn: string;
     last_winning_seat: string;
     last_round_winner: string;
+    three_seven_seat: number;
     pot: number;
     hand_over: boolean;
     hand_completed: boolean;
@@ -33,6 +34,7 @@ export default interface TatamiProps {
     chat_room: [];
     invite_link: string;
     current_round: number;     // 0 = pas de manche en cours, 1..5
+    revealedSeats?: boolean[];
 }
 
 export default interface NormalizedTatamiProps {
