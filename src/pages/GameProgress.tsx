@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import Seat from '@/components/Seat';
 import type TatamiProps from '@/types/Tatami';
-import { MessageCircleMore, Pause, Blocks, Power, ChevronsUp } from 'lucide-react';
+import { MessageCircleMore, Pause, Power } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { showToast } from '@/components/CustomToast';
@@ -619,24 +619,23 @@ const GameProgress: React.FC = () => {
                     <div className="bg-green-gradient backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap shadow-xl rounded-xl mb-8 mt-14 mx-auto">
                         <button
                             onClick={handleSquare}
-                            className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg"
+                            className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-6 rounded-lg transition duration-200 shadow-lg"
                         >
-                            <Blocks className="w-4 h-4" />
                             <span>Carré</span>
                         </button>
 
                         <button
                             onClick={handleThreeSeven}
-                            className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg"
+                            className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-6 rounded-lg transition duration-200 shadow-lg font-bold"
                         >
-                            <span>7 7 7</span>
+                            <span>777</span>
                         </button>
 
                         <button
                             onClick={handleTia}
-                            className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg"
+                            className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-6 rounded-lg transition duration-200 shadow-lg"
                         >
-                            <span>TIA</span>
+                            <span>Tia</span>
                         </button>
                     </div>
                 )}
@@ -650,14 +649,14 @@ const GameProgress: React.FC = () => {
 
                             {/* Bouton Se lever (conditionnel) */}
 
-                            <button onClick={handleUnseat} className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                                <ChevronsUp className="w-4 h-4" />
+                            <button onClick={handleUnseat} className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
+                                {/* <ChevronsUp className="w-4 h-4" /> */}
                                 <span>Se lever</span>
                             </button>
                         </>
                     )}
 
-                    <button onClick={handleLeaveTatami} className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
+                    <button onClick={handleLeaveTatami} className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
                         <Power className="w-4 h-4" />
                         {/* <span>Quitter</span> */}
                     </button>
