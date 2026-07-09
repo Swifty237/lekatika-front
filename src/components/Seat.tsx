@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { WifiOff } from 'lucide-react';
 import cards from '@/components/Cards';
+import Timer from './Timer';
 
 interface SeatProps {
     seatID: string;
@@ -17,6 +18,7 @@ interface SeatProps {
     seatBet: number;
     onCardDoubleClick?: (index: number) => void;
     isDealer?: boolean;
+    inBreak: boolean;
 }
 
 
@@ -32,11 +34,13 @@ const Seat: React.FC<SeatProps> = ({
     isConnected,
     seatBet,
     onCardDoubleClick,
-    isDealer = false
+    isDealer = false,
+    inBreak = false
 }) => {
 
     const [isDragOver, setIsDragOver] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const [timer, setTimer] = useState(0)
 
     const isSeatFour = seatID === '4';
     const isSeatThree = seatID === '3';
@@ -110,6 +114,9 @@ const Seat: React.FC<SeatProps> = ({
     // Cas 3 : siège occupé
     return (
         <div id={seatID} className="relative w-20 h-20">
+            <div className="absolute -bottom-2 -left-2 rounded-full shadow-md z-20">
+                <Timer timer={timer} />
+            </div>
             {/* Badge de déconnexion */}
             {isConnected === false && (
                 <div className="absolute -top-2 -right-2 bg-red-600 rounded-full p-0.5 shadow-md z-20">
@@ -165,6 +172,14 @@ const Seat: React.FC<SeatProps> = ({
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {inBreak && handCards.length === 0 && (
+                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-1 z-10 font-bold">
+                    <span className="bg-green-700  text-white p-1 w-24 text-center">
+                        EN PAUSE
+                    </span>
                 </div>
             )}
 

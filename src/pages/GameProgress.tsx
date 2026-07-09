@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import Seat from '@/components/Seat';
 import type TatamiProps from '@/types/Tatami';
-import { MessageCircleMore, Pause, Power } from 'lucide-react';
+import { MessageCircleMore, Pause, Play, Power } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { showToast } from '@/components/CustomToast';
@@ -9,6 +9,31 @@ import SitOnTableDialog from '@/components/dialog/SitOnTableDialog';
 import { useUser } from '@/hooks/useUser';
 import ChatDialog from '@/components/dialog/ChatDialog';
 // import { allCardKeys } from '@/components/Cards';
+
+interface SeatDataProps {
+    user_id: number;
+    amount_at_stake: number
+}
+
+interface ChatMessageProps {
+    id: string;
+    username: string;
+    content: string;
+    timestamp: string
+}
+
+interface WSMessageProps {
+    tableId: string,
+    seatIndex?: number,
+    cardIndex?: number,
+    content?: string
+}
+
+interface CardProps {
+    hand: string[],
+    played: string[]
+}
+
 
 const GameProgress: React.FC = () => {
 
@@ -19,13 +44,14 @@ const GameProgress: React.FC = () => {
     const [isHeightAbove1200, setIsHeightAbove1200] = useState(false);
     const [isHeightAbove800, setIsHeightAbove800] = useState(false);
     const [isHeightAbove640, setIsHeightAbove640] = useState(false);
-    const [seatBet, setSeatBet] = useState(0);
+    const [inBreak, setInBreak] = useState(false);
     const [sitOnTableDialogOpen, setSitOnTableDialogOpen] = useState(false)
     const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
     const [maxAmountAtStake, setAmountAtStake] = useState<number>(0);
     const [newChatMessages, setNewChatMessages] = useState(0);
     const [openChatDialog, setOpenChatDialog] = useState(false);
-    const [chatMessages, setChatMessages] = useState<{ id: string; username: string; content: string; timestamp: string }[]>([]);
+    const [chatMessages, setChatMessages] = useState<ChatMessageProps[]>([]);
+    const [seatBets, setSeatBets] = useState<number[]>([0, 0, 0, 0]);
 
     const previousMessagesLength = useRef(0);
     const wsRef = useRef<WebSocket | null>(null);
@@ -33,7 +59,7 @@ const GameProgress: React.FC = () => {
     const chatOpenRef = useRef(false);
     const currentUserIdRef = useRef(0);
 
-    const [seatCards, setSeatCards] = useState<{ hand: string[], played: string[] }[]>([
+    const [seatCards, setSeatCards] = useState<CardProps[]>([
         { hand: [], played: [] },
         { hand: [], played: [] },
         { hand: [], played: [] },
@@ -188,11 +214,18 @@ const GameProgress: React.FC = () => {
                     const data = await response.json();
                     setTatami(data.table);
 
+
+                    // Initialiser inBreak pour le joueur courant
+                    const currentSeatIndex = data.table.seats?.findIndex((seat: SeatDataProps) => seat.user_id === currentUser?.user_id);
+                    if (currentSeatIndex !== undefined && currentSeatIndex !== -1) {
+                        setInBreak(data.table.pausedSeats?.[currentSeatIndex] || false);
+                    }
+
                     if (data.table.chat_messages) {
                         setChatMessages(data.table.chat_messages);
                         // Marquer tous les messages comme lus si le chat est ouvert, sinon aucun
                         if (openChatDialog) {
-                            data.table.chat_messages.forEach((msg: { id: string; username: string; content: string; timestamp: string }) => readMessages.current.add(msg.id));
+                            data.table.chat_messages.forEach((msg: ChatMessageProps) => readMessages.current.add(msg.id));
                         } else {
                             // Sinon, on garde le Set vide
                         }
@@ -242,11 +275,21 @@ const GameProgress: React.FC = () => {
                     });
 
                     if (response.ok) {
-                        const data = await response.json();
-                        console.log("TABLE_UPDATED - three_seven_seat:", data.table.three_seven_seat);
-                        setTatami(data.table);
-                        if (data.table.chat_messages) {
-                            const newMessages = data.table.chat_messages;
+                        const fetchedData = await response.json();
+                        const updatedTable = fetchedData.table;
+
+                        // Mettre à jour inBreak pour le joueur courant
+                        const currentSeatIndex = updatedTable.seats?.findIndex((seat: SeatDataProps) => seat.user_id === currentUserIdRef.current);
+                        if (currentSeatIndex !== undefined && currentSeatIndex !== -1) {
+                            setInBreak(updatedTable.pausedSeats?.[currentSeatIndex] || false);
+                        }
+
+
+                        // Mettre à jour tatami avec les sièges protégés
+                        setTatami(updatedTable);
+
+                        if (updatedTable.chat_messages) {
+                            const newMessages = updatedTable.chat_messages;
                             setChatMessages(newMessages);
                             const newLength = newMessages.length;
 
@@ -277,8 +320,8 @@ const GameProgress: React.FC = () => {
                             }
                         }
 
-                        if (data.table.seatCards) {
-                            setSeatCards(data.table.seatCards);
+                        if (updatedTable.seatCards) {
+                            setSeatCards(updatedTable.seatCards);
                         }
                         localStorage.setItem('currentTatami', JSON.stringify(data.table));
                     }
@@ -307,18 +350,32 @@ const GameProgress: React.FC = () => {
             }
 
             if (data.type === 'GAME_EVENT') {
-                // Si c'est un message privé, il n'a pas de tableId, on l'affiche directement
-                // Si c'est un message public, il a tableId et on vérifie
                 if (!data.tableId || data.tableId === sessionStorage.getItem('currentTableID')) {
+                    // Afficher le toast pour tous les messages (Korat !, Double Korat !, Fin de manche, etc.)
                     showToast(data.message, data.isError ? 'error' : 'success');
                 }
+                return; // On évite de traiter d'autres événements pour ce type
             }
 
             if (data.type === 'SEAT_BET_UPDATE' && data.tableId === sessionStorage.getItem('currentTableID')) {
-                const { seatIndex, newAmountAtStake, seatBet } = data;
-                // Mettre à jour le seatBet global
-                setSeatBet(seatBet);
-                // Mettre à jour le montant du siège (pour l'affichage)
+                const { seatIndex, newAmountAtStake, seatBet, winnerSeat } = data;
+                if (winnerSeat !== undefined && seatIndex === winnerSeat) {
+                    console.log("Ignorer SEAT_BET_UPDATE pour le gagnant du Korat", seatIndex);
+                    return;
+                }
+
+                // Ignorer si le siège est en pause
+                if (tatami?.pausedSeats?.[seatIndex]) {
+                    console.log("Ignorer SEAT_BET_UPDATE pour un siège en pause", seatIndex);
+                    return;
+                }
+
+                setSeatBets(prev => {
+                    const newBets = [...prev];
+                    newBets[seatIndex] = seatBet;
+                    return newBets;
+                });
+
                 setTatami(prev => {
                     if (!prev) return prev;
                     const newSeats = [...prev.seats];
@@ -333,12 +390,11 @@ const GameProgress: React.FC = () => {
             }
 
             if (data.type === 'POT_UPDATE' && data.tableId === sessionStorage.getItem('currentTableID')) {
-                const { pot, seatBet } = data;
-                setSeatBet(seatBet);
+                const { pot } = data;
+                setSeatBets([0, 0, 0, 0]);
                 setTatami(prev => prev ? { ...prev, pot } : prev);
             }
         };
-
         return () => ws.close();
     }, []);
 
@@ -356,7 +412,7 @@ const GameProgress: React.FC = () => {
         chatOpenRef.current = false;
     };
 
-    const sendWSMessage = (type: string, payload: { tableId: string, seatIndex?: number, cardIndex?: number, content?: string }) => {
+    const sendWSMessage = (type: string, payload: WSMessageProps) => {
         const ws = wsRef.current;
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type, ...payload }));
@@ -472,14 +528,32 @@ const GameProgress: React.FC = () => {
         });
     };
 
+    const handleToggleBreak = () => {
+        const tableId = sessionStorage.getItem('currentTableID');
+        if (!tableId) return;
+        const seatIndex = tatami?.seats?.findIndex(seat => seat.user_id === currentUser?.user_id);
+        if (seatIndex === undefined || seatIndex === -1) {
+            showToast("Vous n'êtes pas assis", "error");
+            return;
+        }
+        // Basculer localement (pour une interface réactive)
+        setInBreak(prev => !prev);
+        // Envoyer au serveur
+        sendWSMessage('TOGGLE_BREAK', {
+            tableId: tableId,
+            seatIndex: seatIndex,
+        });
+    };
+
     if (!tatami || !currentUser) {
         return <div className="text-center mt-20">Chargement...</div>;
     }
+
     const renderSeats = () => {
         const isCurrentUserSeated = tatami.seats?.some(seat => seat.user_id === currentUser?.user_id);
         return (
             <>
-                {tatami.seats?.map((seat: { user_id: number; amount_at_stake: number }, idx: number) => {
+                {tatami.seats?.map((seat: SeatDataProps, idx: number) => {
                     const isConnected = tatami.seatsConnected && tatami.seatsConnected[idx] === true;
                     const seatNumber = idx + 1;
                     const userIdValue = seat.user_id;
@@ -495,6 +569,8 @@ const GameProgress: React.FC = () => {
                     const isDealer = tatami?.dealer_seat_index === idx;
                     const isRevealed = tatami.revealedSeats && tatami.revealedSeats[idx] === true;
                     const showCards = isCurrentUser || isRevealed;
+                    const isPaused = tatami.pausedSeats?.[idx] || false;
+                    const seatPaused = isCurrentUser ? inBreak : isPaused;
 
                     return (
                         <div key={seatNumber} className={seatPositions[seatNumber]}>
@@ -512,9 +588,10 @@ const GameProgress: React.FC = () => {
                                 handCards={isOccupied ? seatCards[idx]?.hand || [] : []}
                                 playedCards={isOccupied ? seatCards[idx]?.played || [] : []}
                                 isConnected={isConnected}
-                                seatBet={seatBet}
+                                seatBet={seatBets[idx] || 0}
                                 onCardDoubleClick={isCurrentUser ? (index: number) => handleCardDoubleClick(seatNumber, index) : undefined}
                                 isDealer={isDealer}
+                                inBreak={seatPaused}
                             />
                         </div>
                     );
@@ -642,9 +719,8 @@ const GameProgress: React.FC = () => {
                 <div className="bg-green-gradient backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap shadow-xl rounded-xl mb-8 mt-14 mx-auto">
                     {tatami.seats?.some(seat => seat.user_id === currentUser?.user_id) && (
                         <>
-                            <button className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                                <Pause className="w-4 h-4" />
-                                {/* <span>Pause</span> */}
+                            <button onClick={handleToggleBreak} className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
+                                {inBreak ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
                             </button>
 
                             {/* Bouton Se lever (conditionnel) */}

@@ -35,6 +35,7 @@ export default interface TatamiProps {
     invite_link: string;
     current_round: number;     // 0 = pas de manche en cours, 1..5
     revealedSeats?: boolean[];
+    pausedSeats?: boolean[];
 }
 
 export default interface NormalizedTatamiProps {
