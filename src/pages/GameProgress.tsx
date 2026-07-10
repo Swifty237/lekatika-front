@@ -162,6 +162,19 @@ const GameProgress: React.FC = () => {
         }
     }, [searchParams]);
 
+    // Ajoutez cette fonction avant le composant ou à l'intérieur
+    const getPendingSitInfo = (tableId: string | null) => {
+        if (!tableId) return null;
+        const key = `pending_sit_${tableId}`;
+        const data = sessionStorage.getItem(key);
+        if (!data) return null;
+        try {
+            return JSON.parse(data);
+        } catch {
+            return null;
+        }
+    };
+
     const handleSitWithAmount = async (amount: number) => {
         const token = localStorage.getItem('authToken');
         const tableId = sessionStorage.getItem('currentTableID');
@@ -176,15 +189,34 @@ const GameProgress: React.FC = () => {
                 body: JSON.stringify({ amount })
             });
             const data = await response.json();
+
+            if (response.status === 202) {
+                // Créer l'objet et le stocker
+                const sitInfo = {
+                    seatIndex: selectedSeat - 1, // 0-based
+                    username: currentUser?.username || 'Joueur',
+                    amount: amount,
+                    timestamp: Date.now()
+                };
+                const key = `pending_sit_${tableId}`;
+                sessionStorage.setItem(key, JSON.stringify(sitInfo));
+
+                // On peut aussi afficher un toast pour informer
+                // showToast(data.message || "Demande enregistrée, vous serez assis après la distribution", "success");
+
+                setSitOnTableDialogOpen(false);
+                setSelectedSeat(null);
+                return;
+            }
+
             if (response.ok) {
-                // Ne pas modifier localement seatCards, le serveur va générer les cartes
+                // Succès immédiat
                 setTatami(data.table);
                 localStorage.setItem('currentTatami', JSON.stringify(data.table));
                 setSitOnTableDialogOpen(false);
                 setSelectedSeat(null);
                 showToast("Vous êtes assis avec une mise de " + amount + " chips", "success");
                 await refreshUser();
-
             } else {
                 showToast(data.error || "Impossible de s'asseoir", "error");
             }
@@ -277,6 +309,9 @@ const GameProgress: React.FC = () => {
                     if (response.ok) {
                         const fetchedData = await response.json();
                         const updatedTable = fetchedData.table;
+
+                        // Supprimer la demande en attente car la table a été mise à jour
+                        sessionStorage.removeItem(`pending_sit_${tableId}`);
 
                         // Mettre à jour inBreak pour le joueur courant
                         const currentSeatIndex = updatedTable.seats?.findIndex((seat: SeatDataProps) => seat.user_id === currentUserIdRef.current);
@@ -551,26 +586,43 @@ const GameProgress: React.FC = () => {
 
     const renderSeats = () => {
         const isCurrentUserSeated = tatami.seats?.some(seat => seat.user_id === currentUser?.user_id);
+        const pendingSit = getPendingSitInfo(sessionStorage.getItem('currentTableID'));
         return (
             <>
                 {tatami.seats?.map((seat: SeatDataProps, idx: number) => {
+
+
+
                     const isConnected = tatami.seatsConnected && tatami.seatsConnected[idx] === true;
                     const seatNumber = idx + 1;
                     const userIdValue = seat.user_id;
-                    const isOccupied = userIdValue !== 0;
-                    const isCurrentUser = isOccupied && currentUser?.user_id === userIdValue;
-                    const playerIndex = tatami.players?.indexOf(userIdValue);
-                    const playerUsername = playerIndex !== -1 ? tatami.player_usernames?.[playerIndex] : null;
-                    const occupantName = isOccupied
-                        ? (isCurrentUser ? currentUser.username : playerUsername || `Joueur ${userIdValue}`)
-                        : undefined;
-                    const showSitButton = !isOccupied && !isCurrentUserSeated;
-                    const chipsAmount = seat.amount_at_stake;
+                    // const playerIndex = tatami.players?.indexOf(userIdValue);
+                    // const playerUsername = playerIndex !== -1 ? tatami.player_usernames?.[playerIndex] : null;
                     const isDealer = tatami?.dealer_seat_index === idx;
                     const isRevealed = tatami.revealedSeats && tatami.revealedSeats[idx] === true;
-                    const showCards = isCurrentUser || isRevealed;
                     const isPaused = tatami.pausedSeats?.[idx] || false;
+
+                    let isOccupied = userIdValue !== 0;
+
+                    const isCurrentUser = isOccupied && currentUser?.user_id === userIdValue;
+                    const showCards = isCurrentUser || isRevealed;
                     const seatPaused = isCurrentUser ? inBreak : isPaused;
+                    const showSitButton = !isOccupied && !isCurrentUserSeated;
+
+                    let occupantName = undefined;
+                    let chipsAmount = seat.amount_at_stake;
+
+                    // Si le siège est vide mais qu'il y a une demande en attente pour ce siège
+                    if (!isOccupied && pendingSit && pendingSit.seatIndex === idx) {
+                        isOccupied = true; // on simule l'occupation
+                        occupantName = pendingSit.username;
+                        chipsAmount = pendingSit.amount;
+                    } else if (isOccupied) {
+                        // comportement normal
+                        const playerIndex = tatami.players?.indexOf(userIdValue);
+                        const playerUsername = playerIndex !== -1 ? tatami.player_usernames?.[playerIndex] : null;
+                        occupantName = (isCurrentUser ? currentUser.username : playerUsername || `Joueur ${userIdValue}`);
+                    }
 
                     return (
                         <div key={seatNumber} className={seatPositions[seatNumber]}>
