@@ -19,6 +19,8 @@ interface SeatProps {
     onCardDoubleClick?: (index: number) => void;
     isDealer?: boolean;
     inBreak: boolean;
+    isActiveTurn?: boolean;
+    timer?: number;
 }
 
 
@@ -35,12 +37,13 @@ const Seat: React.FC<SeatProps> = ({
     seatBet,
     onCardDoubleClick,
     isDealer = false,
-    inBreak = false
+    inBreak = false,
+    isActiveTurn,
+    timer,
 }) => {
 
     const [isDragOver, setIsDragOver] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
-    const [timer, setTimer] = useState(0)
 
     const isSeatFour = seatID === '4';
     const isSeatThree = seatID === '3';
@@ -114,9 +117,11 @@ const Seat: React.FC<SeatProps> = ({
     // Cas 3 : siège occupé
     return (
         <div id={seatID} className="relative w-20 h-20">
-            <div className="absolute -bottom-2 -left-2 rounded-full shadow-md z-20">
-                <Timer timer={timer} />
-            </div>
+            {isActiveTurn && (
+                <div className="absolute -bottom-2 -left-2 rounded-full shadow-md z-20">
+                    <Timer timer={timer || 0} />
+                </div>
+            )}
             {/* Badge de déconnexion */}
             {isConnected === false && (
                 <div className="absolute -top-2 -right-2 bg-red-600 rounded-full p-0.5 shadow-md z-20">

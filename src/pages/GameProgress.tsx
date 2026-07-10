@@ -2,7 +2,7 @@
 import Seat from '@/components/Seat';
 import type TatamiProps from '@/types/Tatami';
 import { MessageCircleMore, Pause, Play, Power } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { showToast } from '@/components/CustomToast';
 import SitOnTableDialog from '@/components/dialog/SitOnTableDialog';
@@ -52,12 +52,16 @@ const GameProgress: React.FC = () => {
     const [openChatDialog, setOpenChatDialog] = useState(false);
     const [chatMessages, setChatMessages] = useState<ChatMessageProps[]>([]);
     const [seatBets, setSeatBets] = useState<number[]>([0, 0, 0, 0]);
+    const [timerSeconds, setTimerSeconds] = useState(30);
 
     const previousMessagesLength = useRef(0);
     const wsRef = useRef<WebSocket | null>(null);
     const readMessages = useRef<Set<string>>(new Set());
     const chatOpenRef = useRef(false);
     const currentUserIdRef = useRef(0);
+    const timerSecondsRef = useRef(30); // Pour garder la valeur courante sans dépendre de l'état
+    const timerIntervalRef = useRef<number | null>(null);
+    // const previousTurnRef = useRef<number | undefined>(undefined);
 
     const [seatCards, setSeatCards] = useState<CardProps[]>([
         { hand: [], played: [] },
@@ -73,6 +77,20 @@ const GameProgress: React.FC = () => {
     }, [currentUser]);
 
     const [searchParams] = useSearchParams();
+
+    const sendWSMessage = (type: string, payload: WSMessageProps) => {
+        const ws = wsRef.current;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type, ...payload }));
+        } else {
+            // Option 1 : attendre l'ouverture (promesse)
+            // Option 2 : recréer la connexion WebSocket
+            console.warn("WebSocket non prête, tentative de reconnexion...");
+            // Vous pouvez ici réinitialiser la WebSocket
+            // Pour l'instant, on affiche un toast d'erreur
+            showToast("Connexion WebSocket perdue, réessayez", "error");
+        }
+    };
 
     const sendChatMessage = (content: string) => {
         const tableId = sessionStorage.getItem('currentTableID');
@@ -225,6 +243,109 @@ const GameProgress: React.FC = () => {
             showToast("Erreur réseau", "error");
         }
     };
+
+    // Fonctions autoPlay et handleTimerExpired (avec useCallback pour stabilité)
+    const autoPlay = useCallback((seatIndex: number) => {
+        const tableId = sessionStorage.getItem('currentTableID');
+        if (!tableId) return;
+        const hand = seatCards[seatIndex]?.hand || [];
+        if (hand.length === 0) return;
+
+        const suitRequired = tatami?.suit_required || '';
+        let selectedIndex = 0;
+        if (suitRequired) {
+            const idx = hand.findIndex(card => card[0] === suitRequired);
+            if (idx !== -1) selectedIndex = idx;
+        }
+
+        sendWSMessage('PLAY_CARD', {
+            tableId,
+            seatIndex,
+            cardIndex: selectedIndex,
+        });
+    }, [tatami?.suit_required, seatCards]);
+
+    const handleTimerExpired = useCallback((seatIndex: number) => {
+        const tableId = sessionStorage.getItem('currentTableID');
+        if (!tableId) return;
+        // Mettre le joueur en pause
+        sendWSMessage('TOGGLE_BREAK', { tableId, seatIndex });
+        // Jouer automatiquement
+        autoPlay(seatIndex);
+    }, [autoPlay]);
+
+
+    // Effet pour gérer le timer
+    useEffect(() => {
+        // Nettoyer l'intervalle précédent
+        if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+        }
+
+        // Fonction pour décider si le timer doit démarrer
+        const shouldStartTimer = (): boolean => {
+            if (!tatami || tatami.current_round === 0) return false;
+            const seatIdx = tatami.current_turn_seat_index;
+            if (seatIdx === undefined || seatIdx === -1) return false;
+            const isOccupied = tatami.seats?.[seatIdx]?.user_id !== 0;
+            const hasCards = seatCards[seatIdx]?.hand?.length > 0;
+            const isPaused = tatami.pausedSeats?.[seatIdx] || false;
+            return isOccupied && hasCards && !isPaused;
+        };
+
+        const seatIdx = tatami?.current_turn_seat_index;
+
+        if (shouldStartTimer()) {
+            // Réinitialiser le compteur à 30 chaque fois qu'on démarre le timer
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setTimerSeconds(30);
+            timerSecondsRef.current = 30;
+
+            // Démarrer l'intervalle
+            timerIntervalRef.current = window.setInterval(() => {
+                timerSecondsRef.current -= 1;
+                setTimerSeconds(timerSecondsRef.current);
+                if (timerSecondsRef.current <= 0) {
+                    clearInterval(timerIntervalRef.current!);
+                    timerIntervalRef.current = null;
+                    if (seatIdx !== undefined && seatIdx !== -1) {
+                        handleTimerExpired(seatIdx);
+                    }
+                }
+            }, 1000);
+        } else {
+            // Timer non démarré : réinitialiser l'affichage à 30
+            if (timerSecondsRef.current !== 30) {
+                setTimerSeconds(30);
+                timerSecondsRef.current = 30;
+            }
+
+            // Si le joueur est en pause, jouer automatiquement (une seule fois)
+            if (tatami && seatIdx !== undefined && seatIdx !== -1) {
+                const isOccupied = tatami.seats?.[seatIdx]?.user_id !== 0;
+                const hasCards = seatCards[seatIdx]?.hand?.length > 0;
+                const isPaused = tatami.pausedSeats?.[seatIdx] || false;
+                if (isOccupied && hasCards && isPaused) {
+                    autoPlay(seatIdx);
+                }
+            }
+        }
+
+        return () => {
+            if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+                timerIntervalRef.current = null;
+            }
+        };
+    }, [
+        tatami?.current_round,
+        tatami?.current_turn_seat_index,
+        tatami?.seats,
+        tatami?.pausedSeats,
+        seatCards,
+        // Si autoPlay et handleTimerExpired changent, les inclure, mais ils sont stables grâce à useCallback
+    ]);
 
     useEffect(() => {
         const fetchTable = async () => {
@@ -447,21 +568,6 @@ const GameProgress: React.FC = () => {
         chatOpenRef.current = false;
     };
 
-    const sendWSMessage = (type: string, payload: WSMessageProps) => {
-        const ws = wsRef.current;
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type, ...payload }));
-        } else {
-            // Option 1 : attendre l'ouverture (promesse)
-            // Option 2 : recréer la connexion WebSocket
-            console.warn("WebSocket non prête, tentative de reconnexion...");
-            // Vous pouvez ici réinitialiser la WebSocket
-            // Pour l'instant, on affiche un toast d'erreur
-            showToast("Connexion WebSocket perdue, réessayez", "error");
-        }
-    };
-
-
     const handleCardDoubleClick = (seatNumber: number, index: number) => {
         const tableId = sessionStorage.getItem('currentTableID');
         if (!tableId) return;
@@ -591,7 +697,8 @@ const GameProgress: React.FC = () => {
             <>
                 {tatami.seats?.map((seat: SeatDataProps, idx: number) => {
 
-
+                    const isActiveTurn = tatami.current_turn_seat_index === idx;
+                    const timerValue = isActiveTurn ? timerSeconds : 0;
 
                     const isConnected = tatami.seatsConnected && tatami.seatsConnected[idx] === true;
                     const seatNumber = idx + 1;
@@ -644,6 +751,8 @@ const GameProgress: React.FC = () => {
                                 onCardDoubleClick={isCurrentUser ? (index: number) => handleCardDoubleClick(seatNumber, index) : undefined}
                                 isDealer={isDealer}
                                 inBreak={seatPaused}
+                                isActiveTurn={isActiveTurn}
+                                timer={timerValue}
                             />
                         </div>
                     );
