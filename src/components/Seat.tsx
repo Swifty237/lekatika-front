@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { WifiOff } from 'lucide-react';
 import cards from '@/components/Cards';
 import Timer from './Timer';
+import { useUser } from '@/hooks/useUser';
 
 interface SeatProps {
     seatID: string;
@@ -44,6 +45,8 @@ const Seat: React.FC<SeatProps> = ({
 
     const [isDragOver, setIsDragOver] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+
+    const { user } = useUser()
 
     const isSeatFour = seatID === '4';
     const isSeatThree = seatID === '3';
@@ -149,7 +152,11 @@ const Seat: React.FC<SeatProps> = ({
 
             {/* Avatar */}
             <div className="w-full h-full bg-[#0FAC71] rounded-full shadow-xl flex items-center justify-center text-white font-bold overflow-hidden">
-                <img src="img/user-avatar.png" className="w-full h-full object-cover" alt="" />
+                <img
+                    src={user?.profile_picture_link || "img/user-avatar.png"}
+                    className="w-full h-full object-cover rounded-full"
+                    alt="Photo de profil"
+                />
             </div>
 
             {/* Éléments superposés (hors flux) */}

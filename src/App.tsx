@@ -12,6 +12,7 @@ import { TooltipProvider } from './components/ui/tooltip';
 import JoinTable from './components/JoinTable';
 import { UserProvider } from '@/context/UserContext';
 import type { ReactNode } from 'react';
+import ProfileVisitor from './pages/ProfileVisitor';
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/lobby" element={<PrivateRoute><Lobby /></PrivateRoute>} />
                 <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+                <Route path="/profile-visitor/:userId" element={<PrivateRoute><ProfileVisitor /></PrivateRoute>} />
                 <Route path="/notifications" element={<PrivateRoute><Notifications /></PrivateRoute>} />
                 <Route path="/game-progress" element={<PrivateRoute><GameProgress /></PrivateRoute>} />
                 <Route path="/join/:id" element={<PrivateRoute><JoinTable /></PrivateRoute>} />

@@ -148,9 +148,13 @@ const Navbar: React.FC = () => {
                         >
                             <div className="flex items-center">
                                 <div className="rounded-full border h-8 w-8 my-1 me-4">
-                                    <img src="img/user-avatar.png" className="w-full rounded-full" alt="" />
+                                    <img
+                                        src={user?.profile_picture_link || "img/user-avatar.png"}
+                                        className="w-full h-full object-cover rounded-full"
+                                        alt="Photo de profil"
+                                    />
                                 </div>
-                                <span className="hidden md:flex">{username || 'Invité'} </span>
+                                <span className="hidden capitalize md:flex">{username || 'Invité'} </span>
                             </div>
                             {isUserMenuOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </button>
