@@ -1,24 +1,66 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronDown, ChevronUp, HomeIcon, UserCog, Bell, Search, SquareArrowRightExit, CirclePlus } from 'lucide-react';
+import { ChevronDown, ChevronUp, HomeIcon, UserCog, Bell, Search, SquareArrowRightExit, CirclePlus, UsersRound } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { formatNumber } from '@/lib/formatNumber';
 import AddChipsDialog from '@/components/dialog/AddChipsDialog';
 import { useUser } from '@/hooks/useUser';
+import type UserProps from '@/types/User';
+import debounce from "debounce";
+import searchUsers from '@/hooks/useSearchProfile';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useUser()
+    const { user, refreshUser } = useUser()
 
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [username, setUsername] = useState<string>('');
     const [selectedCurrency, setSelectedCurrency] = useState<string>('0'); // '0' = fictif, '1' = réel
     const [freeChipsAmount, setFreeChipsAmount] = useState<string>('');
-    // const [confirmOpen, setConfirmOpen] = useState(false);
+    const [onlineUsersList, setOnlineUsersList] = useState<UserProps[]>([]);
     const [addChipsOpen, setAddChipsOpen] = useState(false);
     //   const [maxBuyIn, setMaxBuyIn] = useState<string>('');
     // const minBuyIn = 1000;
+
+    // État pour stocker les résultats de recherche des profils
+    const [searchProfiles, setSearchProfiles] = useState<UserProps[]>([]);
+    const [searching, setSearching] = useState(false);
+    const searchContainerRef = useRef<HTMLDivElement>(null);
+
+    const wsRef = useRef<WebSocket | null>(null);
+
+    // Gestion de la recherche avec debounce (attente de 500ms avant d'exécuter la requête)
+    const handleSearchName = debounce(async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        if (!value || value.length < 2) {
+            setSearchProfiles([]);
+            setSearching(false);
+            return;
+        }
+
+        setSearching(true);
+        try {
+            const results = await searchUsers(value);
+            setSearchProfiles(results);
+        } catch (error) {
+            console.error(error);
+            setSearchProfiles([]);
+        } finally {
+            setSearching(false);
+        }
+    }, 500);
+
+    // Fermer la liste de résultats en cliquant en dehors
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+                setSearchProfiles([]);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleCurrencyChange = (value: string) => {
         setSelectedCurrency(value);
@@ -29,13 +71,34 @@ const Navbar: React.FC = () => {
         console.log("Devise sélectionnée :", value === '0' ? 'Argent fictif' : 'Argent réel');
     };
 
-    const handleAddChips = (amount: number) => {
-        // Mettre à jour le montant des freeChips
-        const newAmount = Number(freeChipsAmount) + amount;
-        setFreeChipsAmount(newAmount.toString());
-        localStorage.setItem('freeChipsAmountBankroll', newAmount.toString());
-        // Ici plus tard tu pourras appeler une API pour synchroniser avec le backend
-        console.log(`Ajout de ${amount} jetons. Nouveau solde : ${newAmount}`);
+    const handleAddChips = async (amount: number) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const currencyType = selectedCurrency === '0' ? 'free' : 'real';
+            const response = await fetch(`${import.meta.env.VITE_LEKATIKA_SERVER_URI}/api/user/add-chips`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ amount, currencyType }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || "Erreur lors de l'ajout");
+            }
+
+            // Mettre à jour les données utilisateur
+            await refreshUser();
+            // Le toast de succès peut être ajouté ici
+            console.log(`${amount} chips ajoutés avec succès`);
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Erreur inconnue";
+            console.error(msg);
+            // Afficher un toast d'erreur
+            // showToast(msg, "error");
+        }
     };
 
     const handleLogout = async () => {
@@ -81,6 +144,23 @@ const Navbar: React.FC = () => {
         }
     }, []);
 
+
+    useEffect(() => {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        const ws = new WebSocket(`ws://localhost:8080/ws?token=${encodeURIComponent(token)}`);
+        wsRef.current = ws;
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'ONLINE_USERS_UPDATE') {
+                setOnlineUsersList(data.users || []);
+            }
+        };
+
+        return () => ws.close();
+    }, []);
+
     return (
         <nav id="main-nav" className="shadow-md text-sm fixed top-0 left-0 w-full z-50 backdrop-blur-2xl transition-shadow duration-300">
             <div className="container mx-auto px-4 flex justify-between items-center">
@@ -98,12 +178,12 @@ const Navbar: React.FC = () => {
 
                 <div className="flex items-center">
                     <Select onValueChange={handleCurrencyChange} value={selectedCurrency}>
-                        <SelectTrigger className="w-[125px] shadow-lg">
+                        <SelectTrigger className="shadow-lg">
                             <SelectValue placeholder="Argent fictif" />
                         </SelectTrigger>
                         <SelectContent className="text-white bg-[#0FAC71] shadow-lg">
-                            <SelectItem value="0">Argent fictif</SelectItem>
-                            <SelectItem value="1">Argent réel</SelectItem>
+                            <SelectItem value="0">Points découverte</SelectItem>
+                            <SelectItem value="1">Points réel</SelectItem>
                         </SelectContent>
                     </Select>
 
@@ -112,7 +192,7 @@ const Navbar: React.FC = () => {
                         onClick={() => setAddChipsOpen(true)}
                         className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-1 px-2 sm:px-4 shadow-xl rounded-lg"
                     >
-                        <p>{selectedCurrency === '0' ? formatNumber(user?.free_chips_amount_bankroll ?? 0) : '0'}</p>
+                        <p>{selectedCurrency === '0' ? formatNumber(user?.free_chips_amount_bankroll ?? 0) : formatNumber(user?.real_chips_amount_bankroll ?? 0)}</p>
                         <CirclePlus className="h-4 w-4 ms-4" />
                     </button>
                 </div>
@@ -121,23 +201,55 @@ const Navbar: React.FC = () => {
 
                 <div className="flex">
                     <div className="hidden lg:flex items-center justify-center me-4">
-                        <div className="relative w-full md:w-[20vw]">
+                        <div className="flex items-center justify-center me-4 py-1 px-2 rounded-lg shadow-lg">
+                            <span>{<span>{onlineUsersList.length}</span>}</span>
+                            <UsersRound className="h-4 w-4 ms-2" />
+                        </div>
+
+                        <div ref={searchContainerRef} className="relative w-full text-black">
                             <input
                                 type="text"
-                                placeholder="Trouver un joueur ou un tatami"
-                                value={""}
-                                onChange={() => { }}
+                                placeholder="Trouver un joueur"
+                                onChange={handleSearchName}
                                 className="w-full px-3 py-1 rounded-sm shadow-xl focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
                             />
-                            {/* Icône dans le champ */}
+                            {/* Icône de recherche */}
                             <button
                                 type="button"
-                                onClick={() => { }}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-700 p-2 me-[-10px] rounded-sm"
-                                tabIndex={-1} // ne gêne pas la navigation clavier
+                                tabIndex={-1}
                             >
                                 <Search className="h-4 w-4 mx-1" />
                             </button>
+
+                            {/* Résultats */}
+                            {searching && (
+                                <div className="absolute bg-white w-full z-20 left-0 top-12 border p-1 text-center">
+                                    Recherche...
+                                </div>
+                            )}
+                            {!searching && searchProfiles.length > 0 && (
+                                <div className="absolute bg-white w-full z-20 left-0 top-12 border p-1 max-h-60 overflow-y-auto shadow-lg rounded-md">
+                                    {searchProfiles.map((profile, index) => (
+                                        <div className="p-1" key={index}>
+                                            <Link
+                                                to={`/profile-visitor/${profile.user_id}`}
+                                                className="flex items-center justify-between w-full cursor-pointer hover:bg-[#d3f8df] p-1 px-2 rounded"
+                                                onClick={() => setSearchProfiles([])} // ferme la liste après clic
+                                            >
+                                                <div className="flex items-center">
+                                                    <img
+                                                        className="rounded-md w-8 h-8 object-cover"
+                                                        src={profile.profile_picture_link || "img/user-avatar.png"}
+                                                        alt="profile"
+                                                    />
+                                                    <div className="truncate ml-2">{profile.username}</div>
+                                                </div>
+                                            </Link>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -163,23 +275,55 @@ const Navbar: React.FC = () => {
             </div>
 
             <div className="w-full p-2 flex lg:hidden items-center justify-center me-4">
-                <div className="relative mx-8 w-full lg:w-[15vw]">
+                <div className="flex items-center justify-center me-4 py-1 px-2 rounded-lg shadow-lg">
+                    <span>{<span>{onlineUsersList.length}</span>}</span>
+                    <UsersRound className="h-4 w-4 ms-2" />
+                </div>
+
+                <div ref={searchContainerRef} className="relative w-full text-black">
                     <input
                         type="text"
-                        placeholder="Trouver un joueur ou un tatami"
-                        value={""}
-                        onChange={() => { }}
+                        placeholder="Trouver un joueur"
+                        onChange={handleSearchName}
                         className="w-full px-3 py-1 rounded-sm shadow-xl focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
                     />
-                    {/* Icône dans le champ */}
+                    {/* Icône de recherche */}
                     <button
                         type="button"
-                        onClick={() => { }}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-700 p-2 me-[-10px] rounded-sm"
-                        tabIndex={-1} // ne gêne pas la navigation clavier
+                        tabIndex={-1}
                     >
                         <Search className="h-4 w-4 mx-1" />
                     </button>
+
+                    {/* Résultats */}
+                    {searching && (
+                        <div className="absolute bg-white w-full z-20 left-0 top-12 border p-1 text-center">
+                            Recherche...
+                        </div>
+                    )}
+                    {!searching && searchProfiles.length > 0 && (
+                        <div className="absolute bg-white w-full z-20 left-0 top-12 border p-1 max-h-60 overflow-y-auto shadow-lg rounded-md">
+                            {searchProfiles.map((profile, index) => (
+                                <div className="p-1" key={index}>
+                                    <Link
+                                        to={`/profile-visitor/${profile.user_id}`}
+                                        className="flex items-center justify-between w-full cursor-pointer hover:bg-[#d3f8df] p-1 px-2 rounded"
+                                        onClick={() => setSearchProfiles([])} // ferme la liste après clic
+                                    >
+                                        <div className="flex items-center">
+                                            <img
+                                                className="rounded-md w-8 h-8 object-cover"
+                                                src={profile.profile_picture_link || "img/user-avatar.png"}
+                                                alt="profile"
+                                            />
+                                            <div className="truncate ml-2">{profile.username}</div>
+                                        </div>
+                                    </Link>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="rounded-lg hover:bg-[#0FAC71] shadow-xl">
@@ -189,7 +333,11 @@ const Navbar: React.FC = () => {
                     >
                         <div className="flex items-center">
                             <div className="rounded-full border h-8 w-8 my-1 me-4">
-                                <img src="img/user-avatar.png" className="w-full rounded-full" alt="" />
+                                <img
+                                    src={user?.profile_picture_link || "img/user-avatar.png"}
+                                    className="w-full h-full object-cover rounded-full"
+                                    alt="Photo de profil"
+                                />
                             </div>
                             <span className="hidden md:flex">{username || 'Invité'} </span>
                         </div>
@@ -200,9 +348,9 @@ const Navbar: React.FC = () => {
 
             <AddChipsDialog
                 open={addChipsOpen}
-                currencyType="free"
+                currencyType={selectedCurrency == "0" ? "free" : "real"}
                 currentAmount={Number(freeChipsAmount)}
-                maxTotal={3000}
+                maxTotal={10000}
                 onConfirm={(amount) => {
                     handleAddChips(amount);
                     setAddChipsOpen(false);

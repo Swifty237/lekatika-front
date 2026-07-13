@@ -1,13 +1,14 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import Seat from '@/components/Seat';
 import type TatamiProps from '@/types/Tatami';
-import { MessageCircleMore, Pause, Play, Power } from 'lucide-react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { List, MessageCircleMore, Pause, Play, Power } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { showToast } from '@/components/CustomToast';
 import SitOnTableDialog from '@/components/dialog/SitOnTableDialog';
 import { useUser } from '@/hooks/useUser';
 import ChatDialog from '@/components/dialog/ChatDialog';
+import WaitingListDialog from '@/components/dialog/WaitingListDialog';
 // import { allCardKeys } from '@/components/Cards';
 
 interface SeatDataProps {
@@ -52,16 +53,23 @@ const GameProgress: React.FC = () => {
     const [openChatDialog, setOpenChatDialog] = useState(false);
     const [chatMessages, setChatMessages] = useState<ChatMessageProps[]>([]);
     const [seatBets, setSeatBets] = useState<number[]>([0, 0, 0, 0]);
-    const [timerSeconds, setTimerSeconds] = useState(30);
+    const [timerSeconds, setTimerSeconds] = useState(0);
+    const [activeTimerSeat, setActiveTimerSeat] = useState<number | null>(null);
+    const [WaitingListOpen, setWaitingListOpen] = useState(false);
 
+
+    // const previousTurnSeatRef = useRef<number | undefined>(undefined);
+    // const previousRoundRef = useRef<number | undefined>(undefined);
     const previousMessagesLength = useRef(0);
     const wsRef = useRef<WebSocket | null>(null);
     const readMessages = useRef<Set<string>>(new Set());
     const chatOpenRef = useRef(false);
     const currentUserIdRef = useRef(0);
-    const timerSecondsRef = useRef(30); // Pour garder la valeur courante sans dépendre de l'état
-    const timerIntervalRef = useRef<number | null>(null);
+
+
     // const previousTurnRef = useRef<number | undefined>(undefined);
+
+    const waitingUsernames = tatami?.waitingListUsernames || [];
 
     const [seatCards, setSeatCards] = useState<CardProps[]>([
         { hand: [], played: [] },
@@ -244,109 +252,6 @@ const GameProgress: React.FC = () => {
         }
     };
 
-    // Fonctions autoPlay et handleTimerExpired (avec useCallback pour stabilité)
-    const autoPlay = useCallback((seatIndex: number) => {
-        const tableId = sessionStorage.getItem('currentTableID');
-        if (!tableId) return;
-        const hand = seatCards[seatIndex]?.hand || [];
-        if (hand.length === 0) return;
-
-        const suitRequired = tatami?.suit_required || '';
-        let selectedIndex = 0;
-        if (suitRequired) {
-            const idx = hand.findIndex(card => card[0] === suitRequired);
-            if (idx !== -1) selectedIndex = idx;
-        }
-
-        sendWSMessage('PLAY_CARD', {
-            tableId,
-            seatIndex,
-            cardIndex: selectedIndex,
-        });
-    }, [tatami?.suit_required, seatCards]);
-
-    const handleTimerExpired = useCallback((seatIndex: number) => {
-        const tableId = sessionStorage.getItem('currentTableID');
-        if (!tableId) return;
-        // Mettre le joueur en pause
-        sendWSMessage('TOGGLE_BREAK', { tableId, seatIndex });
-        // Jouer automatiquement
-        autoPlay(seatIndex);
-    }, [autoPlay]);
-
-
-    // Effet pour gérer le timer
-    useEffect(() => {
-        // Nettoyer l'intervalle précédent
-        if (timerIntervalRef.current) {
-            clearInterval(timerIntervalRef.current);
-            timerIntervalRef.current = null;
-        }
-
-        // Fonction pour décider si le timer doit démarrer
-        const shouldStartTimer = (): boolean => {
-            if (!tatami || tatami.current_round === 0) return false;
-            const seatIdx = tatami.current_turn_seat_index;
-            if (seatIdx === undefined || seatIdx === -1) return false;
-            const isOccupied = tatami.seats?.[seatIdx]?.user_id !== 0;
-            const hasCards = seatCards[seatIdx]?.hand?.length > 0;
-            const isPaused = tatami.pausedSeats?.[seatIdx] || false;
-            return isOccupied && hasCards && !isPaused;
-        };
-
-        const seatIdx = tatami?.current_turn_seat_index;
-
-        if (shouldStartTimer()) {
-            // Réinitialiser le compteur à 30 chaque fois qu'on démarre le timer
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setTimerSeconds(30);
-            timerSecondsRef.current = 30;
-
-            // Démarrer l'intervalle
-            timerIntervalRef.current = window.setInterval(() => {
-                timerSecondsRef.current -= 1;
-                setTimerSeconds(timerSecondsRef.current);
-                if (timerSecondsRef.current <= 0) {
-                    clearInterval(timerIntervalRef.current!);
-                    timerIntervalRef.current = null;
-                    if (seatIdx !== undefined && seatIdx !== -1) {
-                        handleTimerExpired(seatIdx);
-                    }
-                }
-            }, 1000);
-        } else {
-            // Timer non démarré : réinitialiser l'affichage à 30
-            if (timerSecondsRef.current !== 30) {
-                setTimerSeconds(30);
-                timerSecondsRef.current = 30;
-            }
-
-            // Si le joueur est en pause, jouer automatiquement (une seule fois)
-            if (tatami && seatIdx !== undefined && seatIdx !== -1) {
-                const isOccupied = tatami.seats?.[seatIdx]?.user_id !== 0;
-                const hasCards = seatCards[seatIdx]?.hand?.length > 0;
-                const isPaused = tatami.pausedSeats?.[seatIdx] || false;
-                if (isOccupied && hasCards && isPaused) {
-                    autoPlay(seatIdx);
-                }
-            }
-        }
-
-        return () => {
-            if (timerIntervalRef.current) {
-                clearInterval(timerIntervalRef.current);
-                timerIntervalRef.current = null;
-            }
-        };
-    }, [
-        tatami?.current_round,
-        tatami?.current_turn_seat_index,
-        tatami?.seats,
-        tatami?.pausedSeats,
-        seatCards,
-        // Si autoPlay et handleTimerExpired changent, les inclure, mais ils sont stables grâce à useCallback
-    ]);
-
     useEffect(() => {
         const fetchTable = async () => {
             const tableId = sessionStorage.getItem('currentTableID');
@@ -401,7 +306,7 @@ const GameProgress: React.FC = () => {
             }
         };
         fetchTable();
-    }, []);
+    }, [API_URL, currentUser?.user_id, openChatDialog]);
 
     // WebSocket pour les mises à jour en temps réel
     useEffect(() => {
@@ -550,8 +455,23 @@ const GameProgress: React.FC = () => {
                 setSeatBets([0, 0, 0, 0]);
                 setTatami(prev => prev ? { ...prev, pot } : prev);
             }
+
+            if (data.type === 'TIMER_START') {
+                setActiveTimerSeat(data.seatIndex);
+                setTimerSeconds(data.remaining);
+            }
+
+            if (data.type === 'TIMER_TICK') {
+                setTimerSeconds(data.remaining);
+            }
+
+            if (data.type === 'TIMER_END') {
+                setActiveTimerSeat(null);
+                setTimerSeconds(0);
+            }
         };
         return () => ws.close();
+
     }, []);
 
     const handleOpenChat = () => {
@@ -697,7 +617,7 @@ const GameProgress: React.FC = () => {
             <>
                 {tatami.seats?.map((seat: SeatDataProps, idx: number) => {
 
-                    const isActiveTurn = tatami.current_turn_seat_index === idx;
+                    const isActiveTurn = tatami.current_turn_seat_index === idx && activeTimerSeat === idx
                     const timerValue = isActiveTurn ? timerSeconds : 0;
 
                     const isConnected = tatami.seatsConnected && tatami.seatsConnected[idx] === true;
@@ -753,6 +673,7 @@ const GameProgress: React.FC = () => {
                                 inBreak={seatPaused}
                                 isActiveTurn={isActiveTurn}
                                 timer={timerValue}
+                                userId={isOccupied ? userIdValue : undefined}
                             />
                         </div>
                     );
@@ -773,7 +694,7 @@ const GameProgress: React.FC = () => {
                                     {renderSeats()}
                                     <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
                                         <p className="text-sm pb-2">{tatami.name}</p>
-                                        <p>Pot : {tatami.pot} Chips</p>
+                                        <p>Pot : {tatami.pot} PTS</p>
                                     </div>
                                 </div>
                             </div>
@@ -787,7 +708,7 @@ const GameProgress: React.FC = () => {
                                     {renderSeats()}
                                     <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
                                         <p className="text-sm pb-2">{tatami.name}</p>
-                                        <p>Pot : {tatami.pot} Chips</p>
+                                        <p>Pot : {tatami.pot} PTS</p>
                                     </div>
                                 </div>
                             </div>
@@ -800,7 +721,7 @@ const GameProgress: React.FC = () => {
                                     {renderSeats()}
                                     <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
                                         <p className="text-sm pb-2">{tatami.name}</p>
-                                        <p>Pot : {tatami.pot} Chips</p>
+                                        <p>Pot : {tatami.pot} PTS</p>
                                     </div>
                                 </div>
                             </div>
@@ -814,7 +735,7 @@ const GameProgress: React.FC = () => {
                                     {renderSeats()}
                                     <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
                                         <p className="text-sm pb-2">{tatami.name}</p>
-                                        <p>Pot : {tatami.pot} Chips</p>
+                                        <p>Pot : {tatami.pot} PTS</p>
                                     </div>
                                 </div>
                             </div>
@@ -837,6 +758,12 @@ const GameProgress: React.FC = () => {
                 onCancel={handleCloseChat}
             />
 
+            <WaitingListDialog
+                open={WaitingListOpen}
+                usernames={waitingUsernames}
+                onCancel={() => setWaitingListOpen(false)}
+            />
+
             {/* Barre d'actions en bas */}
             <div className="flex min-w-[55em]">
                 <div className="bg-green-gradient backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap shadow-xl rounded-xl mb-8 mt-14 mx-auto">
@@ -850,6 +777,13 @@ const GameProgress: React.FC = () => {
                             </div>
                         )}
                         <MessageCircleMore className="w-5 h-5" />
+                    </button>
+
+                    <button
+                        onClick={() => setWaitingListOpen(true)}
+                        className="relative hover:bg-[#0FAC71] text-white font-semibold py-2 px-4 rounded-md transition duration-200 shadow-lg"
+                    >
+                        <List className="w-5 h-5" />
                     </button>
                 </div>
 
@@ -886,8 +820,14 @@ const GameProgress: React.FC = () => {
 
                             {/* Bouton Se lever (conditionnel) */}
 
-                            <button onClick={handleUnseat} className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                                {/* <ChevronsUp className="w-4 h-4" /> */}
+                            <button
+                                onClick={handleUnseat}
+                                disabled={tatami.isDealing}
+                                className={`flex items-center text-white font-extrabold py-2 px-6 rounded-lg transition duration-200 shadow-lg ${tatami.isDealing
+                                        ? 'opacity-50 cursor-not-allowed bg-gray-600'
+                                        : 'hover:bg-[#0FAC71]'
+                                    }`}
+                            >
                                 <span>Se lever</span>
                             </button>
                         </>

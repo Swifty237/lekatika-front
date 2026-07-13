@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 interface ChatMessage {
@@ -45,6 +45,15 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
     return (
         <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
             <DialogContent className="max-w-[90vw] 2md:max-w-[50vw] bg-[#2c5036] text-white h-[70vh] flex flex-col">
+
+                <DialogHeader>
+                    <DialogTitle>
+                    </DialogTitle>
+                    <DialogDescription>
+
+                    </DialogDescription>
+                </DialogHeader>
+
                 <div className="flex-1 overflow-y-auto p-4 border border-white rounded-lg">
                     {messages.length === 0 ? (
                         <div className="text-gray-400 text-center">Aucun message pour l'instant</div>

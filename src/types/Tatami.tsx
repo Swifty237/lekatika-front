@@ -38,6 +38,8 @@ export default interface TatamiProps {
     pausedSeats?: boolean[];
     current_turn_seat_index?: number; // -1 si aucun tour en cours
     suit_required?: string;
+    waitingListUsernames?: string[];
+    isDealing?: boolean;
 }
 
 export default interface NormalizedTatamiProps {

@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
-import { Beer, ChevronLeft, ChevronRight, CircleDollarSign, DoorClosedLocked, DoorOpen, Play, SquareArrowOutUpRight, TriangleAlert } from 'lucide-react';
+import { Beer, ChevronLeft, ChevronRight, CircleDollarSign, DoorClosedLocked, DoorOpen, Play, Search, SquareArrowOutUpRight, TriangleAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NewTatamiDialog from '@/components/dialog/NewTatamiDialog';
 import { showToast } from '@/components/CustomToast';
@@ -9,12 +9,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import type TatamiProps from '@/types/Tatami';
 import { useUser } from '@/hooks/useUser';
+import debounce from 'debounce';
 
 
 const Lobby: React.FC = () => {
     const [newTatamiOpen, setNewTatamiOpen] = useState(false);
     const [tables, setTables] = useState<TatamiProps[]>([]); // État pour stocker les tatamis
     const [activeColumn, setActiveColumn] = useState(0);
+    // États pour la recherche
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filteredTables, setFilteredTables] = useState<TatamiProps[]>([]);
 
     const navigate = useNavigate();
     const { user } = useUser();
@@ -30,6 +34,42 @@ const Lobby: React.FC = () => {
     // const totalPagesNonTraites = Math.ceil(tables.length / ITEMS_PER_PAGE);
     // const startIndexNonTraites = (currentPageNonTraites - 1) * ITEMS_PER_PAGE;
     // const paginatedNonArchives = devisNonArchives.slice(startIndexNonTraites, startIndexNonTraites + ITEMS_PER_PAGE);
+
+    // Fonction de filtrage
+    const filterTables = useCallback((query: string) => {
+        if (!query.trim()) {
+            setFilteredTables(tables);
+            return;
+        }
+        const lowerQuery = query.toLowerCase();
+        const filtered = tables.filter(table =>
+            table.name.toLowerCase().includes(lowerQuery)
+        );
+        setFilteredTables(filtered);
+    }, [tables]);
+
+    // Debounce pour éviter de filtrer à chaque frappe
+    const debouncedFilter = useMemo(() => debounce(filterTables, 300), [filterTables]);
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSearchQuery(value);
+        debouncedFilter(value);
+    };
+
+    // Nettoyer le debounce au démontage
+    useEffect(() => {
+        return () => {
+            debouncedFilter.clear();
+        };
+    }, [debouncedFilter]);
+
+    // Initialiser filteredTables quand les tables sont chargées
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setFilteredTables(tables);
+    }, [tables]);
+
 
     const fetchTables = async () => {
         const token = localStorage.getItem('authToken');
@@ -250,12 +290,34 @@ const Lobby: React.FC = () => {
                     </button>
                 </div>
 
+                <div className="relative mx-8 mt-8 w-[85vw] lg:w-[50vw]">
+                    <input
+                        type="text"
+                        placeholder="Trouver un tatami"
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        className="w-full px-3 py-1 rounded-sm shadow-xl focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71] text-black"
+                    />
+                    <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-700 p-2 me-[-10px] rounded-sm"
+                        tabIndex={-1}
+                    >
+                        <Search className="h-4 w-4 mx-1" />
+                    </button>
+                </div>
+
                 <div className="w-full flex flex-col justify-center items-center 2lg:w-[80vw] lg:w-[90vw] min-h-[30vh] bg-white mt-8 rounded-md text-black">
                     <div className="p-8 w-full overflow-x-auto">
-                        {tables.length === 0 ? (
+                        {filteredTables.length === 0 ? (
                             <div className="flex flex-col items-center">
-                                <span>Oops ! il n'y a pas de tatami ouvert actuellement...</span>
-                                <span>N'hésite pas à ouvrir un nouveau tatami, ça fait venir les joueurs <span className="shadow-xl rounded-full text-lg">😉</span></span>
+
+                                {searchQuery.trim() ? "Aucun tatami trouvé" :
+                                    <>
+                                        <span>Oops ! il n'y a pas de tatami ouvert actuellement...</span>
+                                        <span>N'hésite pas à ouvrir un nouveau tatami, ça fait venir les joueurs <span className="shadow-xl rounded-full text-lg">😉</span></span>
+                                    </>
+                                }
                             </div>
                         ) : (
                             <div className="shadow-xl">
@@ -295,7 +357,7 @@ const Lobby: React.FC = () => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {tables.map((table) => (
+                                        {filteredTables.map((table) => (
                                             <TableRow key={table.id} className="bg-green-100 border-gray-300">
                                                 <TableCell className="px-6 py-4  text-gray-900 whitespace-nowrap flex justify-center">
                                                     {table.name}
@@ -381,7 +443,7 @@ const Lobby: React.FC = () => {
                                         </TableHeader>
                                         <TableBody>
 
-                                            {tables.map((row) => (
+                                            {filteredTables.map((row) => (
                                                 <TableRow key={row.id} className="bg-green-100 border-gray-300">
                                                     <TableCell>
                                                         {switchAttribut(row) || "-"}

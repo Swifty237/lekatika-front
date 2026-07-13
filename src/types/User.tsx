@@ -4,5 +4,5 @@ export default interface UserProps {
     email: string;
     free_chips_amount_bankroll: number;
     real_chips_amount_bankroll: number;
-    profile_picture_link: string;
+    profile_picture_link?: string | null;
 }

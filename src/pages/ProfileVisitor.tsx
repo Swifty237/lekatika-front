@@ -1,15 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { Link, useParams } from 'react-router-dom';
-import { showToast } from '@/components/CustomToast';
+// import { showToast } from '@/components/CustomToast';
 import { useUser } from '@/hooks/useUser';
+import type UserProps from '@/types/User';
 
-interface UserProfileData {
-    id: number;
-    username: string;
-    profile_picture_link?: string | null;
-    // Ajoutez d'autres champs si nécessaire (bio, etc.)
-}
 
 const ProfileVisitor: React.FC = () => {
     // Récupérer l'ID depuis l'URL (ex: /profile-visitor/:userId)
@@ -17,7 +12,7 @@ const ProfileVisitor: React.FC = () => {
     // Ou bien via une prop
     // const { userId } = props;
 
-    const [profileData, setProfileData] = useState<UserProfileData | null>(null);
+    const [profileData, setProfileData] = useState<UserProps | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -61,16 +56,21 @@ const ProfileVisitor: React.FC = () => {
                     throw new Error("Impossible de trouver l'identifiant de l'utilisateur");
                 }
 
-                setProfileData({
-                    id: userIdValue,
+                const newProfileData: UserProps = {
+                    user_id: userIdValue,
                     username: userData.username,
                     profile_picture_link: userData.profile_picture_link,
-                });
+                    email: userData.email,
+                    free_chips_amount_bankroll: userData.free_chips_amount_bankroll,
+                    real_chips_amount_bankroll: userData.real_chips_amount_bankroll,
+                }
+
+                setProfileData(newProfileData);
                 setLoading(false);
             } catch (err) {
                 const msg = err instanceof Error ? err.message : "Erreur inconnue";
                 setError(msg);
-                showToast(msg, "error");
+                // showToast(msg, "error");
                 setLoading(false);
             }
         };
@@ -98,12 +98,6 @@ const ProfileVisitor: React.FC = () => {
         );
     }
 
-    console.log("user connecté :", user);
-    console.log("profileData reçu :", profileData);
-    console.log("ID user connecté :", user?.user_id);
-    console.log("ID profil visité :", profileData?.id);
-    console.log("Comparaison :", user?.user_id === profileData?.id);
-
     return (
         <MainLayout>
             <div className="flex flex-col items-center">
@@ -112,7 +106,7 @@ const ProfileVisitor: React.FC = () => {
                         Profil
                     </h1>
 
-                    {user && Number(user.user_id) === Number(profileData.id) && (
+                    {user && Number(user.user_id) === Number(profileData.user_id) && (
                         <Link to={`/profile`} className="flex justify-end items-center pe-4">
                             <span className="text-lg underline">Gestion du profil</span>
                         </Link>
@@ -141,7 +135,7 @@ const ProfileVisitor: React.FC = () => {
                         </div>
                     </div>
 
-                    <h2 className="font-bold mb-2">Description</h2>
+                    <h2 className="font-bold mb-2">Biographie</h2>
                     <div className="text-sm grid grid-col-1 border rounded-md shadow-md mb-8">
                         <div className="flex flex-col p-4">
                             <span>

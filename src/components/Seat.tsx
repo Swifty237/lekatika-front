@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { WifiOff } from 'lucide-react';
 import cards from '@/components/Cards';
 import Timer from './Timer';
-import { useUser } from '@/hooks/useUser';
+import type UserProfileData from '@/types/User';
+import type UserProps from '@/types/User';
+// import { useUser } from '@/hooks/useUser';
 
 interface SeatProps {
     seatID: string;
@@ -22,6 +24,7 @@ interface SeatProps {
     inBreak: boolean;
     isActiveTurn?: boolean;
     timer?: number;
+    userId?: number;
 }
 
 
@@ -41,12 +44,14 @@ const Seat: React.FC<SeatProps> = ({
     inBreak = false,
     isActiveTurn,
     timer,
+    userId,
 }) => {
 
     const [isDragOver, setIsDragOver] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const [profileData, setProfileData] = useState<UserProfileData | null>(null);
 
-    const { user } = useUser()
+    // const { user } = useUser()
 
     const isSeatFour = seatID === '4';
     const isSeatThree = seatID === '3';
@@ -85,6 +90,59 @@ const Seat: React.FC<SeatProps> = ({
             console.error('Drop error:', err);
         }
     };
+
+    useEffect(() => {
+        if (!userId) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setProfileData(null);
+            return;
+        }
+
+        const fetchUserProfile = async () => {
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(
+                    `${import.meta.env.VITE_LEKATIKA_SERVER_URI}/api/users/${userId}`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                    }
+                );
+
+                if (!response.ok) {
+                    if (response.status === 404) throw new Error("Utilisateur non trouvé");
+                    throw new Error("Erreur lors du chargement du profil");
+                }
+
+                const data = await response.json();
+                const userData = data.user || data;
+                const userIdValue = userData.id || userData.user_id || userData.ID || userData.userId;
+                if (!userIdValue) {
+                    throw new Error("Impossible de trouver l'identifiant de l'utilisateur");
+                }
+
+                const newProfileData: UserProps = {
+                    user_id: userIdValue,
+                    username: userData.username,
+                    profile_picture_link: userData.profile_picture_link,
+                    email: userData.email,
+                    free_chips_amount_bankroll: userData.free_chips_amount_bankroll,
+                    real_chips_amount_bankroll: userData.real_chips_amount_bankroll,
+                }
+
+                setProfileData(newProfileData);
+
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : "Erreur inconnue";
+                console.error("Erreur chargement profil:", msg);
+                // On ne set pas de profil, on garde l'avatar par défaut
+            }
+        };
+
+        fetchUserProfile();
+    }, [userId]);
 
     // Cas 1 : siège vide avec bouton "S'asseoir" (si onSit est fourni)
     if (!isOccupied && onSit) {
@@ -153,7 +211,7 @@ const Seat: React.FC<SeatProps> = ({
             {/* Avatar */}
             <div className="w-full h-full bg-[#0FAC71] rounded-full shadow-xl flex items-center justify-center text-white font-bold overflow-hidden">
                 <img
-                    src={user?.profile_picture_link || "img/user-avatar.png"}
+                    src={profileData?.profile_picture_link || "img/user-avatar.png"}
                     className="w-full h-full object-cover rounded-full"
                     alt="Photo de profil"
                 />
@@ -198,7 +256,7 @@ const Seat: React.FC<SeatProps> = ({
             {/* Nom d'utilisateur et chips */}
             <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-white font-bold whitespace-nowrap capitalize underline shadow-sm">
                 {username || `Joueur ${seatID}`}
-                {chips !== undefined && ` (${chips} chips)`}
+                {chips !== undefined && ` (${chips} PTS)`}
             </span>
 
             {/* Cartes jouées par le joueur local visibles par tout le monde et lui même */}

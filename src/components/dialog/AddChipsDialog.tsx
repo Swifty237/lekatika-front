@@ -9,6 +9,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+// import { showToast } from '@/components/CustomToast';
 
 interface AddChipsDialogProps {
     open: boolean;
@@ -29,7 +30,7 @@ const AddChipsDialog: React.FC<AddChipsDialogProps> = ({
 }) => {
     const [amount, setAmount] = useState<string>('');
     const maxAdd = Math.max(0, maxTotal - currentAmount);
-    const isAddDisabled = maxAdd <= 0;
+    const isAddDisabled = maxAdd <= 0 || currencyType != "free";
 
     // Réinitialiser l'input quand la modal s'ouvre
     useEffect(() => {
@@ -50,12 +51,12 @@ const AddChipsDialog: React.FC<AddChipsDialogProps> = ({
             <DialogContent className="max-w-sm border border-white text-white bg-[#2c5036]">
                 <DialogHeader>
                     <DialogTitle>
-                        {currencyType === 'free' ? 'Ajouter des jetons gratuits' : 'Ajouter des jetons réels'}
+                        {currencyType === 'free' ? 'Ajouter des points découverte' : 'Ajouter des points réel'}
                     </DialogTitle>
                     <DialogDescription>
                         {isAddDisabled
-                            ? "Vous ne pouvez pas rajouter de chips pour le moment."
-                            : `Vous pouvez ajouter jusqu'à ${maxAdd} jetons.`}
+                            ? `Vous ne pouvez pas rajouter de points ${currencyType === "free" ? "découverte" : "réel"} pour le moment.`
+                            : `Vous pouvez ajouter jusqu'à ${maxAdd} points découverte.`}
                     </DialogDescription>
                 </DialogHeader>
 
