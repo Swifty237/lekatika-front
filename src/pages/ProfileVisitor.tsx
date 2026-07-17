@@ -63,7 +63,10 @@ const ProfileVisitor: React.FC = () => {
                     email: userData.email,
                     free_chips_amount_bankroll: userData.free_chips_amount_bankroll,
                     real_chips_amount_bankroll: userData.real_chips_amount_bankroll,
+                    bio: userData.bio,
                 }
+
+                console.log("profile_picture_link reçu:", userData.profile_picture_link);
 
                 setProfileData(newProfileData);
                 setLoading(false);
@@ -119,7 +122,7 @@ const ProfileVisitor: React.FC = () => {
                             <div className="flex justify-around">
                                 <div className="w-[150px] h-[150px] shadow-xl rounded-full mb-4 overflow-hidden">
                                     <img
-                                        src={profileData.profile_picture_link || "img/user-avatar.png"}
+                                        src={profileData.profile_picture_link || "/img/user-avatar.png"}
                                         className="w-full h-full object-cover"
                                         alt="Photo de profil"
                                     />
@@ -138,12 +141,7 @@ const ProfileVisitor: React.FC = () => {
                     <h2 className="font-bold mb-2">Biographie</h2>
                     <div className="text-sm grid grid-col-1 border rounded-md shadow-md mb-8">
                         <div className="flex flex-col p-4">
-                            <span>
-                                {/* Ici vous pouvez afficher une bio si vous en avez une */}
-                                Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-                                Aspernatur, eos sunt inventore similique assumenda quis culpa soluta, saepe eius cupiditate consequatur, earum omnis nesciunt fuga iste quibusdam incidunt quod laborum dolore!
-                                Repellendus esse, nemo cumque deleniti odit quasi distinctio, dolorem dolore ad labore voluptatum alias. Dolor eos eum rerum. Blanditiis?
-                            </span>
+                            <span>{profileData?.bio || "Aucune biographie disponible."}</span>
                         </div>
                     </div>
                 </div>

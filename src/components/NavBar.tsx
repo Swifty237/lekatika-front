@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronDown, ChevronUp, HomeIcon, UserCog, Bell, Search, SquareArrowRightExit, CirclePlus, UsersRound } from 'lucide-react';
+import { ChevronDown, ChevronUp, HomeIcon, UserCog, Bell, Search, SquareArrowRightExit, CirclePlus, UsersRound, Scale } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { formatNumber } from '@/lib/formatNumber';
 import AddChipsDialog from '@/components/dialog/AddChipsDialog';
@@ -167,11 +167,11 @@ const Navbar: React.FC = () => {
                 {/* Logo */}
                 <div className="flex items-center">
                     <Link to="/lobby" className="w-[100px]">
-                        <img src="img/logo-transparent.png" alt="" />
+                        <img src="/img/logo-transparent.png" alt="" />
                     </Link>
 
                     <Link to="/lobby" className="flex hover:bg-[#0FAC71] transition items-center py-1 px-4 shadow-xl rounded-lg">
-                        <HomeIcon className="h-4 w-4 me-2" />
+                        <HomeIcon className="h-5 w-5 me-2" />
                         <span className="hidden lg:flex">Lobby</span>
                     </Link>
                 </div>
@@ -179,11 +179,11 @@ const Navbar: React.FC = () => {
                 <div className="flex items-center">
                     <Select onValueChange={handleCurrencyChange} value={selectedCurrency}>
                         <SelectTrigger className="shadow-lg">
-                            <SelectValue placeholder="Argent fictif" />
+                            <SelectValue placeholder="" />
                         </SelectTrigger>
                         <SelectContent className="text-white bg-[#0FAC71] shadow-lg">
                             <SelectItem value="0">Points découverte</SelectItem>
-                            <SelectItem value="1">Points réel</SelectItem>
+                            <SelectItem value="1">Points réels</SelectItem>
                         </SelectContent>
                     </Select>
 
@@ -193,7 +193,7 @@ const Navbar: React.FC = () => {
                         className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-1 px-2 sm:px-4 shadow-xl rounded-lg"
                     >
                         <p>{selectedCurrency === '0' ? formatNumber(user?.free_chips_amount_bankroll ?? 0) : formatNumber(user?.real_chips_amount_bankroll ?? 0)}</p>
-                        <CirclePlus className="h-4 w-4 ms-4" />
+                        <CirclePlus className="h-5 w-5 ms-4" />
                     </button>
                 </div>
 
@@ -203,7 +203,7 @@ const Navbar: React.FC = () => {
                     <div className="hidden lg:flex items-center justify-center me-4">
                         <div className="flex items-center justify-center me-4 py-1 px-2 rounded-lg shadow-lg">
                             <span>{<span>{onlineUsersList.length}</span>}</span>
-                            <UsersRound className="h-4 w-4 ms-2" />
+                            <UsersRound className="h-5 w-5 ms-2" />
                         </div>
 
                         <div ref={searchContainerRef} className="relative w-full text-black">
@@ -211,7 +211,7 @@ const Navbar: React.FC = () => {
                                 type="text"
                                 placeholder="Trouver un joueur"
                                 onChange={handleSearchName}
-                                className="w-full px-3 py-1 rounded-sm shadow-xl focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
+                                className="w-full px-3 py-2 rounded-lg shadow-xl focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
                             />
                             {/* Icône de recherche */}
                             <button
@@ -219,7 +219,7 @@ const Navbar: React.FC = () => {
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-700 p-2 me-[-10px] rounded-sm"
                                 tabIndex={-1}
                             >
-                                <Search className="h-4 w-4 mx-1" />
+                                <Search className="h-5 w-5" />
                             </button>
 
                             {/* Résultats */}
@@ -261,14 +261,14 @@ const Navbar: React.FC = () => {
                             <div className="flex items-center">
                                 <div className="rounded-full border h-8 w-8 my-1 me-4">
                                     <img
-                                        src={user?.profile_picture_link || "img/user-avatar.png"}
+                                        src={user?.profile_picture_link || "/img/user-avatar.png"}
                                         className="w-full h-full object-cover rounded-full"
                                         alt="Photo de profil"
                                     />
                                 </div>
                                 <span className="hidden capitalize md:flex">{username || 'Invité'} </span>
                             </div>
-                            {isUserMenuOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            {isUserMenuOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                         </button>
                     </div>
                 </div>
@@ -285,7 +285,7 @@ const Navbar: React.FC = () => {
                         type="text"
                         placeholder="Trouver un joueur"
                         onChange={handleSearchName}
-                        className="w-full px-3 py-1 rounded-sm shadow-xl focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
+                        className="w-full px-3 py-2 rounded-lg shadow-xl focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
                     />
                     {/* Icône de recherche */}
                     <button
@@ -293,7 +293,7 @@ const Navbar: React.FC = () => {
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-700 p-2 me-[-10px] rounded-sm"
                         tabIndex={-1}
                     >
-                        <Search className="h-4 w-4 mx-1" />
+                        <Search className="h-5 w-5" />
                     </button>
 
                     {/* Résultats */}
@@ -341,7 +341,7 @@ const Navbar: React.FC = () => {
                             </div>
                             <span className="hidden md:flex">{username || 'Invité'} </span>
                         </div>
-                        {isUserMenuOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {isUserMenuOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                     </button>
                 </div>
             </div>
@@ -363,10 +363,7 @@ const Navbar: React.FC = () => {
                     <div className="px-8 pb-3 md:w-[50vw]">
                         <Link
                             to="/profile"
-                            className={`flex items-center transition-colors duration-200 hover:bg-[#0FAC71] p-2 ${location.pathname === "/passwordModif"
-                                ? 'text-[#001964]'
-                                : 'text-muted-foreground'
-                                }`}
+                            className={`flex items-center transition-colors duration-200 hover:bg-[#0FAC71] p-2`}
                         >
                             <button
                                 type="button"
@@ -375,7 +372,7 @@ const Navbar: React.FC = () => {
                                 }}
                                 className="flex items-center"
                             >
-                                <UserCog className="h-4 w-4 me-2" />
+                                <UserCog className="h-5 w-5 me-2" />
                                 Gestion du profil
                             </button>
                         </Link>
@@ -394,8 +391,27 @@ const Navbar: React.FC = () => {
                                 }}
                                 className="flex items-center"
                             >
-                                <Bell className="h-4 w-4 me-2" />
+                                <Bell className="h-5 w-5 me-2" />
                                 Notifications
+                            </button>
+                        </Link>
+
+                        <Link
+                            to="/rules"
+                            className={`flex items-center transition-colors duration-200 hover:bg-[#0FAC71] p-2 ${location.pathname === "/passwordModif"
+                                ? 'text-[#001964]'
+                                : 'text-muted-foreground'
+                                }`}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsUserMenuOpen(false);
+                                }}
+                                className="flex items-center"
+                            >
+                                <Scale className="h-5 w-5 me-2" />
+                                Règles du jeu
                             </button>
                         </Link>
 
@@ -408,7 +424,7 @@ const Navbar: React.FC = () => {
                             className="flex items-center hover:bg-[#0FAC71] w-full p-2"
                         >
                             <span className="flex items-center">
-                                <SquareArrowRightExit className="w-4 h-4 me-2" />
+                                <SquareArrowRightExit className="w-5 h-5 me-2" />
                                 Déconnexion
                             </span>
                         </button>

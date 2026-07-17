@@ -69,7 +69,7 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
                     </div>
 
                     <label htmlFor="tatami-type" className="text-white">
-                        Argent réel ?
+                        Points réels ?
                     </label>
                     <div className="flex items-center border rounded-xl py-1 px-2 w-[67%]">
                         {/* Oui s'affiche uniquement si isRealMoney est vrai */}
@@ -110,13 +110,13 @@ const NewTatamiDialog: React.FC<NewTatamiDialogProps> = ({
 
                     <Select onValueChange={handleBetChange} value={selectedBet}>
                         <SelectTrigger className="w-[67%] shadow-lg text-white">
-                            <SelectValue placeholder="25 chips" />
+                            <SelectValue placeholder="25 Points" />
                         </SelectTrigger>
                         <SelectContent className="text-white bg-[#0FAC71] shadow-lg">
-                            <SelectItem value="25">25 chips</SelectItem>
-                            <SelectItem value="50">50 chips</SelectItem>
-                            <SelectItem value="100">100 chips</SelectItem>
-                            <SelectItem value="200">200 chips</SelectItem>
+                            <SelectItem value="25">25 Points</SelectItem>
+                            <SelectItem value="50">50 Points</SelectItem>
+                            <SelectItem value="100">100 Points</SelectItem>
+                            <SelectItem value="200">200 Points</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>

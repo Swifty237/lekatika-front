@@ -102,13 +102,11 @@ const Lobby: React.FC = () => {
     const handleJoinTable = async (tableId: string) => {
         const token = localStorage.getItem('authToken');
         if (!token) {
-            // Stocker l'URL pour rediriger après connexion
             localStorage.setItem('redirectAfterLogin', `/join/${tableId}`);
             navigate('/login');
             return;
         }
 
-        // Ouvrir un nouvel onglet vide immédiatement
         const newTab = window.open('about:blank', '_blank');
         if (!newTab) {
             showToast("Impossible d'ouvrir un nouvel onglet, vérifiez votre bloqueur de popups", "error");
@@ -128,12 +126,16 @@ const Lobby: React.FC = () => {
 
             if (response.ok) {
                 sessionStorage.setItem('currentTableID', result.table.id);
-                fetchTables(); // rafraîchir la liste des tables
-
+                fetchTables(); // rafraîchir la liste
+                if (result.alreadyIn) {
+                    showToast("Vous êtes déjà dans cette table");
+                } else {
+                    showToast("Vous avez rejoint la table", "success");
+                }
                 newTab.location.href = `/game-progress?tableId=${result.table.id}`;
             } else {
                 showToast(result.error || "Impossible de rejoindre le tatami", "error");
-                newTab.close(); // fermer l'onglet vide
+                newTab.close();
             }
         } catch (err) {
             console.error(err);
@@ -276,11 +278,11 @@ const Lobby: React.FC = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[40%]">
                         <label className="flex items-center gap-2 mb-4 lg:mb-0">
                             <input type="checkbox" checked disabled className="w-4 h-4 rounded focus:ring-[#0FAC71]" />
-                            <span>Argent fictif</span>
+                            <span>Poins découverte</span>
                         </label>
                         <label className="flex items-center gap-2">
                             <input type="checkbox" disabled className="w-4 h-4 rounded focus:ring-[#0FAC71]" />
-                            <span>Argent réel</span>
+                            <span>Points réels</span>
                         </label>
                     </div>
 
@@ -296,18 +298,18 @@ const Lobby: React.FC = () => {
                         placeholder="Trouver un tatami"
                         value={searchQuery}
                         onChange={handleSearchChange}
-                        className="w-full px-3 py-1 rounded-sm shadow-xl focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71] text-black"
+                        className="w-full px-3 py-2 rounded-lg shadow-xl focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71] text-black"
                     />
                     <button
                         type="button"
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-700 p-2 me-[-10px] rounded-sm"
                         tabIndex={-1}
                     >
-                        <Search className="h-4 w-4 mx-1" />
+                        <Search className="h-5 w-5" />
                     </button>
                 </div>
 
-                <div className="w-full flex flex-col justify-center items-center 2lg:w-[80vw] lg:w-[90vw] min-h-[30vh] bg-white mt-8 rounded-md text-black">
+                <div className="w-full flex flex-col justify-center items-center 2lg:w-[80vw] lg:w-[90vw] min-h-[50vh] bg-white mt-8 rounded-md text-black opacity-80">
                     <div className="p-8 w-full overflow-x-auto">
                         {filteredTables.length === 0 ? (
                             <div className="flex flex-col items-center">
@@ -384,22 +386,14 @@ const Lobby: React.FC = () => {
                                                     }
                                                 </TableCell>
                                                 <TableCell className="px-6 py-4">
-                                                    {table.players && table.players.includes(user!.user_id) ? (
-                                                        <div className="flex justify-center">
-                                                            <button disabled className="text-gray-400 cursor-not-allowed">
-                                                                Rejoint
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex justify-center">
-                                                            <button
-                                                                onClick={() => handleJoinTable(table.id)}
-                                                                className="text-blue-600 hover:text-blue-800"
-                                                            >
-                                                                Rejoindre
-                                                            </button>
-                                                        </div>
-                                                    )}
+                                                    <div className="flex justify-center">
+                                                        <button
+                                                            onClick={() => handleJoinTable(table.id)}
+                                                            className="text-blue-600 hover:text-blue-800"
+                                                        >
+                                                            Rejoindre
+                                                        </button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}

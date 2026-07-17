@@ -35,6 +35,33 @@ interface CardProps {
     played: string[]
 }
 
+interface PendingSitInfo {
+    seatIndex: number;
+    username: string;
+    amount: number;
+    timestamp: number;
+}
+
+interface TurnCard {
+    seatIndex: number;
+    card: string;
+}
+
+interface TurnHistory {
+    turnNumber: number;
+    cardsPlayed: TurnCard[];
+    notifications: string[];
+}
+
+interface HandHistoryEntry {
+    handNumber: number;
+    turns: TurnHistory[];
+    winnerSeat: number;
+    winnerUserID: number;
+    isKorat: boolean;
+    isAbandon: boolean;
+}
+
 
 const GameProgress: React.FC = () => {
 
@@ -56,6 +83,7 @@ const GameProgress: React.FC = () => {
     const [timerSeconds, setTimerSeconds] = useState(0);
     const [activeTimerSeat, setActiveTimerSeat] = useState<number | null>(null);
     const [WaitingListOpen, setWaitingListOpen] = useState(false);
+    const [handHistory, setHandHistory] = useState<HandHistoryEntry[]>([]);
 
 
     // const previousTurnSeatRef = useRef<number | undefined>(undefined);
@@ -189,15 +217,18 @@ const GameProgress: React.FC = () => {
     }, [searchParams]);
 
     // Ajoutez cette fonction avant le composant ou à l'intérieur
-    const getPendingSitInfo = (tableId: string | null) => {
-        if (!tableId) return null;
+    const getPendingSitList = (tableId: string | null): PendingSitInfo[] => {
+        if (!tableId) return [];
         const key = `pending_sit_${tableId}`;
         const data = sessionStorage.getItem(key);
-        if (!data) return null;
+        if (!data) return [];
         try {
-            return JSON.parse(data);
+            const parsed = JSON.parse(data);
+            // Si c'est un tableau, le retourner, sinon le convertir en tableau (rétrocompatibilité)
+            if (Array.isArray(parsed)) return parsed;
+            return [parsed];
         } catch {
-            return null;
+            return [];
         }
     };
 
@@ -217,18 +248,17 @@ const GameProgress: React.FC = () => {
             const data = await response.json();
 
             if (response.status === 202) {
-                // Créer l'objet et le stocker
-                const sitInfo = {
-                    seatIndex: selectedSeat - 1, // 0-based
+                const key = `pending_sit_${tableId}`;
+                const existingList = getPendingSitList(tableId);
+                const newEntry: PendingSitInfo = {
+                    seatIndex: selectedSeat - 1,
                     username: currentUser?.username || 'Joueur',
                     amount: amount,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
                 };
-                const key = `pending_sit_${tableId}`;
-                sessionStorage.setItem(key, JSON.stringify(sitInfo));
-
-                // On peut aussi afficher un toast pour informer
-                // showToast(data.message || "Demande enregistrée, vous serez assis après la distribution", "success");
+                // Ajouter la nouvelle demande et stocker la liste mise à jour
+                const updatedList = [...existingList, newEntry];
+                sessionStorage.setItem(key, JSON.stringify(updatedList));
 
                 setSitOnTableDialogOpen(false);
                 setSelectedSeat(null);
@@ -271,7 +301,7 @@ const GameProgress: React.FC = () => {
                 if (response.ok) {
                     const data = await response.json();
                     setTatami(data.table);
-
+                    sessionStorage.removeItem(`pending_sit_${tableId}`);
 
                     // Initialiser inBreak pour le joueur courant
                     const currentSeatIndex = data.table.seats?.findIndex((seat: SeatDataProps) => seat.user_id === currentUser?.user_id);
@@ -345,10 +375,6 @@ const GameProgress: React.FC = () => {
                             setInBreak(updatedTable.pausedSeats?.[currentSeatIndex] || false);
                         }
 
-
-                        // Mettre à jour tatami avec les sièges protégés
-                        setTatami(updatedTable);
-
                         if (updatedTable.chat_messages) {
                             const newMessages = updatedTable.chat_messages;
                             setChatMessages(newMessages);
@@ -384,6 +410,11 @@ const GameProgress: React.FC = () => {
                         if (updatedTable.seatCards) {
                             setSeatCards(updatedTable.seatCards);
                         }
+
+                        // Mettre à jour tatami avec les sièges protégés
+                        setTatami(updatedTable);
+                        sessionStorage.removeItem(`pending_sit_${tableId}`);
+
                         localStorage.setItem('currentTatami', JSON.stringify(data.table));
                     }
                 };
@@ -468,6 +499,20 @@ const GameProgress: React.FC = () => {
             if (data.type === 'TIMER_END') {
                 setActiveTimerSeat(null);
                 setTimerSeconds(0);
+            }
+
+            if (data.type === 'DEALING_END' && data.tableId === sessionStorage.getItem('currentTableID')) {
+
+                // Forcer la mise à jour de isDealing à false
+                setTatami(prev => prev ? { ...prev, isDealing: false } : prev);
+                console.log("tatami?.isDealing" + tatami?.isDealing);
+
+                return;
+            }
+
+            if (data.type === 'HISTORY_UPDATE' && data.tableId === sessionStorage.getItem('currentTableID')) {
+                setHandHistory(data.history || []);
+                return; // Ne pas traiter comme un GAME_EVENT
             }
         };
         return () => ws.close();
@@ -589,6 +634,10 @@ const GameProgress: React.FC = () => {
         });
     };
 
+    useEffect(() => {
+        console.log('ChatDialog history:', history);
+    }, [history]);
+
     const handleToggleBreak = () => {
         const tableId = sessionStorage.getItem('currentTableID');
         if (!tableId) return;
@@ -612,7 +661,7 @@ const GameProgress: React.FC = () => {
 
     const renderSeats = () => {
         const isCurrentUserSeated = tatami.seats?.some(seat => seat.user_id === currentUser?.user_id);
-        const pendingSit = getPendingSitInfo(sessionStorage.getItem('currentTableID'));
+        const pendingSitList = getPendingSitList(sessionStorage.getItem('currentTableID'));
         return (
             <>
                 {tatami.seats?.map((seat: SeatDataProps, idx: number) => {
@@ -635,15 +684,16 @@ const GameProgress: React.FC = () => {
                     const showCards = isCurrentUser || isRevealed;
                     const seatPaused = isCurrentUser ? inBreak : isPaused;
                     const showSitButton = !isOccupied && !isCurrentUserSeated;
+                    const pendingForThisSeat = pendingSitList.find(p => p.seatIndex === idx);
 
                     let occupantName = undefined;
                     let chipsAmount = seat.amount_at_stake;
 
                     // Si le siège est vide mais qu'il y a une demande en attente pour ce siège
-                    if (!isOccupied && pendingSit && pendingSit.seatIndex === idx) {
-                        isOccupied = true; // on simule l'occupation
-                        occupantName = pendingSit.username;
-                        chipsAmount = pendingSit.amount;
+                    if (!isOccupied && pendingForThisSeat) {
+                        isOccupied = true;
+                        occupantName = pendingForThisSeat.username;
+                        chipsAmount = pendingForThisSeat.amount;
                     } else if (isOccupied) {
                         // comportement normal
                         const playerIndex = tatami.players?.indexOf(userIdValue);
@@ -684,6 +734,16 @@ const GameProgress: React.FC = () => {
 
     return (
         <div className="min-h-screen grid grid-cols-1 bg-green-gradient font-suse overflow-y-auto justify-between w-full">
+            {/* Image de fond */}
+            <div
+                className="absolute inset-0 w-full h-full bg-center bg-no-repeat bg-contain opacity-20 blur-md"
+                style={{
+                    backgroundImage: "url('/img/logo-transparent.png')",
+                    backgroundSize: 'cover',
+                    zIndex: 0,
+                }}
+            />
+
             <div className="mb-14">
                 <div className={`${getContainerHeightClass()}`}>
                     <div className={`flex items-center justify-center m-2 min-w-[55em] overflow-auto ${getContainerAnotherHeightClass()}`}>
@@ -754,6 +814,7 @@ const GameProgress: React.FC = () => {
             <ChatDialog
                 open={openChatDialog}
                 messages={chatMessages}
+                history={handHistory}
                 onSendMessage={sendChatMessage}
                 onCancel={handleCloseChat}
             />
@@ -766,7 +827,7 @@ const GameProgress: React.FC = () => {
 
             {/* Barre d'actions en bas */}
             <div className="flex min-w-[55em]">
-                <div className="bg-green-gradient backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap shadow-xl rounded-xl mb-8 mt-14 mx-auto">
+                <div className="backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap rounded-xl mb-8 mt-14 mx-auto">
                     <button
                         onClick={handleOpenChat}
                         className="relative hover:bg-[#0FAC71] text-white font-semibold py-2 px-4 rounded-full transition duration-200 shadow-lg"
@@ -788,34 +849,34 @@ const GameProgress: React.FC = () => {
                 </div>
 
                 {tatami.seats?.some(seat => seat.user_id === currentUser?.user_id) && (
-                    <div className="bg-green-gradient backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap shadow-xl rounded-xl mb-8 mt-14 mx-auto">
+                    <div className="backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap rounded-xl mb-8 mt-14 mx-auto">
                         <button
                             onClick={handleSquare}
-                            className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-6 rounded-lg transition duration-200 shadow-lg"
+                            className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-4 rounded-xl transition duration-200 shadow-lg"
                         >
                             <span>Carré</span>
                         </button>
 
                         <button
                             onClick={handleThreeSeven}
-                            className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-6 rounded-lg transition duration-200 shadow-lg font-bold"
+                            className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-4 rounded-full transition duration-200 shadow-lg font-bold"
                         >
                             <span>777</span>
                         </button>
 
                         <button
                             onClick={handleTia}
-                            className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-6 rounded-lg transition duration-200 shadow-lg"
+                            className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-4 rounded-full transition duration-200 shadow-lg"
                         >
                             <span>Tia</span>
                         </button>
                     </div>
                 )}
-                <div className="bg-green-gradient backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap shadow-xl rounded-xl mb-8 mt-14 mx-auto">
+                <div className="backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap rounded-xl mb-8 mt-14 mx-auto">
                     {tatami.seats?.some(seat => seat.user_id === currentUser?.user_id) && (
                         <>
-                            <button onClick={handleToggleBreak} className="flex items-center hover:bg-[#0FAC71] text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                                {inBreak ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                            <button onClick={handleToggleBreak} className={`flex items-center ${inBreak ? "bg-[#2c5036]/50 hover:bg-[#2c5036]" : "hover:bg-[#0FAC71]"} text-white font-semibold py-2 px-3 rounded-lg transition duration-200 shadow-lg`}>
+                                {inBreak ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
                             </button>
 
                             {/* Bouton Se lever (conditionnel) */}
@@ -823,9 +884,9 @@ const GameProgress: React.FC = () => {
                             <button
                                 onClick={handleUnseat}
                                 disabled={tatami.isDealing}
-                                className={`flex items-center text-white font-extrabold py-2 px-6 rounded-lg transition duration-200 shadow-lg ${tatami.isDealing
-                                        ? 'opacity-50 cursor-not-allowed bg-gray-600'
-                                        : 'hover:bg-[#0FAC71]'
+                                className={`flex items-center text-white font-extrabold py-2 px-4 rounded-full transition duration-200 shadow-lg ${tatami.isDealing
+                                    ? 'opacity-50 cursor-not-allowed bg-[#bdc3c7]'
+                                    : 'hover:bg-[#0FAC71]'
                                     }`}
                             >
                                 <span>Se lever</span>
@@ -833,8 +894,11 @@ const GameProgress: React.FC = () => {
                         </>
                     )}
 
-                    <button onClick={handleLeaveTatami} className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-6 rounded-lg transition duration-200 shadow-lg">
-                        <Power className="w-4 h-4" />
+                    <button onClick={handleLeaveTatami} className={`flex items-center justify-center  text-white font-extrabold py-2 px-3 rounded-full transition duration-200 shadow-lg ${tatami.isDealing
+                        ? 'opacity-50 cursor-not-allowed bg-[#bdc3c7]'
+                        : 'bg-[#e74c3c]/50 hover:bg-[#e74c3c]'
+                        }`}>
+                        <Power className="w-5 h-5" />
                         {/* <span>Quitter</span> */}
                     </button>
                 </div>

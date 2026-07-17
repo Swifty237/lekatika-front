@@ -5,4 +5,5 @@ export default interface UserProps {
     free_chips_amount_bankroll: number;
     real_chips_amount_bankroll: number;
     profile_picture_link?: string | null;
+    bio?: string;
 }

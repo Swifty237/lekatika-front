@@ -26,6 +26,11 @@ const JoinTable: React.FC = () => {
                 if (response.ok) {
                     const data = await response.json();
                     sessionStorage.setItem('currentTableID', data.table.id);
+                    if (data.alreadyIn) {
+                        showToast("Vous êtes déjà dans cette table");
+                    } else {
+                        showToast("Vous avez rejoint la table", "success");
+                    }
                     navigate('/game-progress');
                 } else {
                     const error = await response.json();
@@ -40,7 +45,7 @@ const JoinTable: React.FC = () => {
         };
 
         joinTable();
-    }, [id, navigate]);
+    }, [API_URL, id, navigate]);
 
     return <div>Rejoindre la table...</div>;
 };

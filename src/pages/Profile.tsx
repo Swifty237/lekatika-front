@@ -8,12 +8,15 @@ import { Link } from 'react-router-dom';
 
 const Profile: React.FC = () => {
 
+    const { user, refreshUser } = useUser();
+
     const photoInputRef = useRef<HTMLInputElement>(null);
     const [photos, setPhotos] = useState<File[]>([]);
     const [uploading, setUploading] = useState(false);
     const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+    const [bio, setBio] = useState<string>(user?.bio || '');
+    const [isBioUpdating, setIsBioUpdating] = useState(false);
 
-    const { user, refreshUser } = useUser();
 
     const handleProfilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -42,6 +45,36 @@ const Profile: React.FC = () => {
     };
 
     const handleSubmit = async () => { }
+
+
+    const handleBioSubmit = async () => {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        setIsBioUpdating(true);
+        try {
+            const response = await fetch(`${import.meta.env.VITE_LEKATIKA_SERVER_URI}/api/user/bio`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ bio })
+            });
+            if (response.ok) {
+                showToast("Biographie mise à jour", "success");
+                setBio("");
+                await refreshUser(); // recharge l'utilisateur
+            } else {
+                const err = await response.json();
+                showToast(err.error || "Erreur", "error");
+            }
+        } catch (err) {
+            console.error(err);
+            showToast("Erreur réseau", "error");
+        } finally {
+            setIsBioUpdating(false);
+        }
+    };
 
     const handleProfilePhotoSubmit = async () => {
         if (!profilePhotoFile) {
@@ -109,7 +142,7 @@ const Profile: React.FC = () => {
                                     <h2 className="font-semibold mb-2">Photo de profil : </h2>
                                     <div className="w-[150px] h-[150px] shadow-xl rounded-full mb-4 overflow-hidden">
                                         <img
-                                            src={user?.profile_picture_link || "img/user-avatar.png"}
+                                            src={user?.profile_picture_link || "/img/user-avatar.png"}
                                             className="w-full h-full object-cover"
                                             alt="Photo de profil"
                                         />
@@ -156,27 +189,21 @@ const Profile: React.FC = () => {
                         <div className="flex flex-col p-4">
                             <label htmlFor="message" className="font-bold mb-2"></label>
                             <textarea
-                                id="message"
-                                name="message"
-                                value=""
-                                onChange={() => { }}
-                                placeholder=""
+                                id="bio"
+                                name="bio"
+                                value={bio}
+                                onChange={(e) => setBio(e.target.value)}
+                                placeholder="Parle-nous un peu de toi..."
                                 rows={3}
-                                className="w-full px-3 py-1 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
+                                className="w-full px-3 py-1 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71] text-black"
                             />
                         </div>
-                        <button className="text-sm flex justify-self-end m-4 items-center hover:border shadow-xl px-8 py-2 rounded-lg" onClick={handleSubmit} disabled={uploading}>
-                            {uploading ? (
-                                <>
-                                    <Loader className="animate-spin" />
-                                </>
-                            ) : (
-                                <>
-                                    <>
-                                        <Send className="w-4 h-4 me-2" />
-                                        <span>Valider</span>
-                                    </></>
-                            )}
+                        <button
+                            className="text-sm flex justify-self-end m-4 items-center hover:border shadow-xl px-8 py-2 rounded-lg"
+                            onClick={handleBioSubmit}
+                            disabled={isBioUpdating}
+                        >
+                            {isBioUpdating ? <Loader className="animate-spin" /> : <><Send className="w-4 h-4 me-2" /><span>Valider</span></>}
                         </button>
                     </div>
 
