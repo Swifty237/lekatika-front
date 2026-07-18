@@ -1,3 +1,25 @@
+interface TurnCard {
+    seatIndex: number;
+    card: string;
+}
+
+interface TurnHistory {
+    turnNumber: number;
+    cardsPlayed: TurnCard[];
+    notifications: string[];
+}
+
+export default interface HandHistoryEntry {
+    handNumber: number;
+    turns: TurnHistory[];
+    winnerSeat: number;
+    winnerUserID: number;
+    isKorat: boolean;
+    isAbandon: boolean;
+    timestamp: number;
+}
+
+
 export default interface TatamiProps {
     id: string;
     name: string;

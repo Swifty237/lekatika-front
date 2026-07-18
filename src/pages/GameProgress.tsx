@@ -2,14 +2,14 @@
 import Seat from '@/components/Seat';
 import type TatamiProps from '@/types/Tatami';
 import { List, MessageCircleMore, Pause, Play, Power } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { showToast } from '@/components/CustomToast';
 import SitOnTableDialog from '@/components/dialog/SitOnTableDialog';
 import { useUser } from '@/hooks/useUser';
 import ChatDialog from '@/components/dialog/ChatDialog';
 import WaitingListDialog from '@/components/dialog/WaitingListDialog';
-// import { allCardKeys } from '@/components/Cards';
+import type HandHistoryEntry from '@/types/Tatami';
 
 interface SeatDataProps {
     user_id: number;
@@ -41,27 +41,6 @@ interface PendingSitInfo {
     amount: number;
     timestamp: number;
 }
-
-interface TurnCard {
-    seatIndex: number;
-    card: string;
-}
-
-interface TurnHistory {
-    turnNumber: number;
-    cardsPlayed: TurnCard[];
-    notifications: string[];
-}
-
-interface HandHistoryEntry {
-    handNumber: number;
-    turns: TurnHistory[];
-    winnerSeat: number;
-    winnerUserID: number;
-    isKorat: boolean;
-    isAbandon: boolean;
-}
-
 
 const GameProgress: React.FC = () => {
 
@@ -105,6 +84,17 @@ const GameProgress: React.FC = () => {
         { hand: [], played: [] },
         { hand: [], played: [] },
     ]);
+
+    const usernamesBySeat = useMemo(() => {
+        if (!tatami?.seats) return [];
+        return tatami.seats.map((seat, idx) => {
+            if (seat.user_id === 0) return `Siège ${idx + 1}`;
+            const userIndex = tatami.players?.indexOf(seat.user_id);
+            return userIndex !== -1
+                ? tatami.player_usernames?.[userIndex] || `Joueur ${seat.user_id}`
+                : `Joueur ${seat.user_id}`;
+        });
+    }, [tatami]);
 
     useEffect(() => {
         if (currentUser) {
@@ -375,38 +365,6 @@ const GameProgress: React.FC = () => {
                             setInBreak(updatedTable.pausedSeats?.[currentSeatIndex] || false);
                         }
 
-                        if (updatedTable.chat_messages) {
-                            const newMessages = updatedTable.chat_messages;
-                            setChatMessages(newMessages);
-                            const newLength = newMessages.length;
-
-                            if (chatOpenRef.current) {
-                                // Chat ouvert : marquer tous les nouveaux messages comme lus
-                                for (let i = previousMessagesLength.current; i < newLength; i++) {
-                                    readMessages.current.add(newMessages[i].id);
-                                }
-                                setNewChatMessages(0);
-                                previousMessagesLength.current = newLength;
-                            } else {
-                                // Chat fermé : compter les messages non lus (expéditeur différent)
-                                if (newLength > previousMessagesLength.current) {
-                                    let count = 0;
-                                    for (let i = previousMessagesLength.current; i < newLength; i++) {
-                                        const msg = newMessages[i];
-                                        if (!readMessages.current.has(msg.id) && msg.user_id !== currentUserIdRef.current) {
-                                            count++;
-                                            // On ne les marque pas encore comme lus, car ils ne sont pas encore vus
-                                        }
-                                    }
-                                    if (count > 0) {
-                                        setNewChatMessages(prev => prev + count);
-                                    }
-                                    // Mettre à jour previousMessagesLength pour éviter de recompter
-                                    previousMessagesLength.current = newLength;
-                                }
-                            }
-                        }
-
                         if (updatedTable.seatCards) {
                             setSeatCards(updatedTable.seatCards);
                         }
@@ -513,6 +471,17 @@ const GameProgress: React.FC = () => {
             if (data.type === 'HISTORY_UPDATE' && data.tableId === sessionStorage.getItem('currentTableID')) {
                 setHandHistory(data.history || []);
                 return; // Ne pas traiter comme un GAME_EVENT
+            }
+
+            if (data.type === 'CHAT_MESSAGE' && data.tableId === sessionStorage.getItem('currentTableID')) {
+                const newMsg = data.message;
+                // Ajouter le message à la liste
+                setChatMessages(prev => [...prev, newMsg]);
+                // Si le chat est fermé et que le message n'est pas du joueur courant, incrémenter le compteur
+                if (!chatOpenRef.current && newMsg.user_id !== currentUserIdRef.current) {
+                    setNewChatMessages(prev => prev + 1);
+                }
+                return;
             }
         };
         return () => ws.close();
@@ -815,6 +784,7 @@ const GameProgress: React.FC = () => {
                 open={openChatDialog}
                 messages={chatMessages}
                 history={handHistory}
+                usernamesBySeat={usernamesBySeat}
                 onSendMessage={sendChatMessage}
                 onCancel={handleCloseChat}
             />

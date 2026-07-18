@@ -278,7 +278,7 @@ const Lobby: React.FC = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[40%]">
                         <label className="flex items-center gap-2 mb-4 lg:mb-0">
                             <input type="checkbox" checked disabled className="w-4 h-4 rounded focus:ring-[#0FAC71]" />
-                            <span>Poins découverte</span>
+                            <span>Points découverte</span>
                         </label>
                         <label className="flex items-center gap-2">
                             <input type="checkbox" disabled className="w-4 h-4 rounded focus:ring-[#0FAC71]" />
@@ -348,7 +348,7 @@ const Lobby: React.FC = () => {
                                             </TableHead>
                                             <TableHead scope="col" className="border">
                                                 <div className="flex justify-center items-center">
-                                                    <TriangleAlert className="h-4 w-4 me-1" />Argent réel
+                                                    <TriangleAlert className="h-4 w-4 me-1" />Points réels
                                                 </div>
                                             </TableHead>
                                             <TableHead scope="col" className="border">
@@ -377,7 +377,7 @@ const Lobby: React.FC = () => {
                                                     }
                                                 </TableCell>
                                                 <TableCell className="px-6 py-4">
-                                                    <span className="flex justify-center">{table.bet} chips</span>
+                                                    <span className="flex justify-center">{table.bet} Points</span>
                                                 </TableCell>
                                                 <TableCell className="px-6 py-4">
                                                     {table.realMoney ?
