@@ -603,10 +603,6 @@ const GameProgress: React.FC = () => {
         });
     };
 
-    useEffect(() => {
-        console.log('ChatDialog history:', history);
-    }, [history]);
-
     const handleToggleBreak = () => {
         const tableId = sessionStorage.getItem('currentTableID');
         if (!tableId) return;
@@ -705,7 +701,7 @@ const GameProgress: React.FC = () => {
         <div className="min-h-screen grid grid-cols-1 bg-green-gradient font-suse overflow-y-auto justify-between w-full">
             {/* Image de fond */}
             <div
-                className="absolute inset-0 w-full h-full bg-center bg-no-repeat bg-contain opacity-20 blur-md"
+                className="absolute inset-0 w-full h-full bg-center bg-no-repeat bg-contain opacity-10 blur-sm bg-[#e74c3c] pointer-events-none"
                 style={{
                     backgroundImage: "url('/img/logo-transparent.png')",
                     backgroundSize: 'cover',

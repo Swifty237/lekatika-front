@@ -26,7 +26,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <div className="min-h-screen flex flex-col bg-green-gradient font-suse text-white relative">
             {/* Image de fond */}
             <div
-                className="absolute inset-0 w-full h-full bg-center bg-no-repeat bg-contain opacity-20 blur-md"
+                className="absolute inset-0 w-full h-full bg-center bg-no-repeat bg-contain opacity-10 blur-sm bg-[#e74c3c] pointer-events-none"
                 style={{
                     backgroundImage: "url('/img/logo-transparent.png')",
                     backgroundSize: 'cover',

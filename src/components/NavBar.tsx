@@ -162,11 +162,11 @@ const Navbar: React.FC = () => {
     }, []);
 
     return (
-        <nav id="main-nav" className="shadow-md text-sm fixed top-0 left-0 w-full z-50 backdrop-blur-2xl transition-shadow duration-300">
+        <nav id="main-nav" className="shadow-md text-sm fixed top-0 left-0 w-full z-50 backdrop-blur-2xl transition-shadow duration-300 bg-green-gradient">
             <div className="container mx-auto px-4 flex justify-between items-center">
                 {/* Logo */}
                 <div className="flex items-center">
-                    <Link to="/lobby" className="w-[100px]">
+                    <Link to="/lobby" className="w-[100px] bg-red-gradient m-2 rounded-sm">
                         <img src="/img/logo-transparent.png" alt="" />
                     </Link>
 

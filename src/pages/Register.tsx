@@ -88,7 +88,7 @@ const Register: React.FC = () => {
 
             <div className="flex flex-col-reverse lg:flex-row w-[100vw] lg:w-[70vw] self-center justify-self-center bg-red-gradient rounded-xl shadow-xl">
                 <div
-                    className="absolute inset-0 w-full h-full bg-center bg-no-repeat bg-contain opacity-20 blur-md pointer-events-none"
+                    className="absolute inset-0 w-full h-full bg-center bg-no-repeat bg-contain opacity-10 blur-sm bg-[#e74c3c] pointer-events-none"
                     style={{
                         backgroundImage: "url('/img/logo-transparent.png')",
                         backgroundSize: 'cover',
@@ -96,8 +96,8 @@ const Register: React.FC = () => {
                     }}
                 />
 
-                <div className="flex items-center justify-center p-2">
-                    <div className="bg-red-gradient w-[100vw] lg:w-[45vw] p-4 rounded-lg">
+                <div className="flex items-center justify-center">
+                    <div className="bg-red-gradient w-[100vw] lg:w-[45vw] p-4 m-8">
                         <h2 className="text-center text-xl font-extrabold text-white">
                             Inscription
                         </h2>
