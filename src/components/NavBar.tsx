@@ -163,11 +163,11 @@ const Navbar: React.FC = () => {
     }, []);
 
     return (
-        <nav id="main-nav" className="shadow-md text-sm fixed top-0 left-0 w-full z-50 backdrop-blur-2xl transition-shadow duration-300 bg-green-gradient">
-            <div className="container mx-auto px-4 flex justify-between items-center">
+        <nav id="main-nav" className="grid grid-cols-1 lg:flex justify-center bg-green-gradient shadow-md text-sm fixed top-0 left-0 w-full z-50 backdrop-blur-2xl transition-shadow duration-300">
+            <div className="container flex justify-between items-center">
                 {/* Logo */}
-                <div className="flex items-center">
-                    <Link to="/lobby" className="w-[100px] bg-red-gradient m-2 rounded-sm">
+                <div className="flex items-center justify-between">
+                    <Link to="/lobby" className="w-[65px] lg:w-[100px] bg-red-gradient m-2 rounded-sm">
                         <img src="/img/logo-transparent.png" alt="" />
                     </Link>
 
@@ -177,9 +177,9 @@ const Navbar: React.FC = () => {
                     </Link>
                 </div>
 
-                <div className="flex items-center">
+                <div className="hidden sm:flex lg:hidden items-center justify-between px-4">
                     <Select onValueChange={handleCurrencyChange} value={selectedCurrency}>
-                        <SelectTrigger className="shadow-lg">
+                        <SelectTrigger className="shadow-lg w-[175px]">
                             <SelectValue placeholder="" />
                         </SelectTrigger>
                         <SelectContent className="text-white bg-[#0FAC71] shadow-lg">
@@ -198,10 +198,48 @@ const Navbar: React.FC = () => {
                     </button>
                 </div>
 
+                <div className="lg:hidden rounded-lg hover:bg-[#0FAC71] shadow-xl me-2">
+                    <button
+                        onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                        className="lg:w-[17em] px-2 lg:px-8 py-1 rounded-md text-white flex items-center justify-between"
+                    >
+                        <div className="flex items-center">
+                            <div className="rounded-full border h-8 w-8 my-1 me-4">
+                                <img
+                                    src={user?.profile_picture_link || "img/user-avatar.png"}
+                                    className="w-full h-full object-cover rounded-full"
+                                    alt="Photo de profil"
+                                />
+                            </div>
+                            <span className="hidden md:flex">{username || 'Invité'} </span>
+                        </div>
+                        {isUserMenuOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                    </button>
+                </div>
 
+                <div className="hidden lg:flex items-center">
+                    <Select onValueChange={handleCurrencyChange} value={selectedCurrency}>
+                        <SelectTrigger className="shadow-lg w-[175px]">
+                            <SelectValue placeholder="" />
+                        </SelectTrigger>
+                        <SelectContent className="text-white bg-[#0FAC71] shadow-lg">
+                            <SelectItem value="0">Points découverte</SelectItem>
+                            <SelectItem value="1">Points réels</SelectItem>
+                        </SelectContent>
+                    </Select>
 
-                <div className="flex">
-                    <div className="hidden lg:flex items-center justify-center me-4">
+                    <button
+                        type="button"
+                        onClick={() => setAddChipsOpen(true)}
+                        className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-1 px-2 sm:px-4 shadow-xl rounded-lg"
+                    >
+                        <p>{selectedCurrency === '0' ? formatNumber(user?.free_chips_amount_bankroll ?? 0) : formatNumber(user?.real_chips_amount_bankroll ?? 0)}</p>
+                        <CirclePlus className="h-5 w-5 ms-4" />
+                    </button>
+                </div>
+
+                <div className="hidden lg:flex">
+                    <div className="flex items-center justify-center me-4">
                         <div className="flex items-center justify-center me-4 py-1 px-2 rounded-lg shadow-lg">
                             <span>{<span>{onlineUsersList.length}</span>}</span>
                             <UsersRound className="h-5 w-5 ms-2" />
@@ -275,6 +313,27 @@ const Navbar: React.FC = () => {
                 </div>
             </div>
 
+            <div className="flex sm:hidden items-center justify-between px-4">
+                <Select onValueChange={handleCurrencyChange} value={selectedCurrency}>
+                    <SelectTrigger className="shadow-lg w-[175px]">
+                        <SelectValue placeholder="" />
+                    </SelectTrigger>
+                    <SelectContent className="text-white bg-[#0FAC71] shadow-lg">
+                        <SelectItem value="0">Points découverte</SelectItem>
+                        <SelectItem value="1">Points réels</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <button
+                    type="button"
+                    onClick={() => setAddChipsOpen(true)}
+                    className="ms-4 hover:bg-[#0FAC71] transition flex items-center py-1 px-2 sm:px-4 shadow-xl rounded-lg"
+                >
+                    <p>{selectedCurrency === '0' ? formatNumber(user?.free_chips_amount_bankroll ?? 0) : formatNumber(user?.real_chips_amount_bankroll ?? 0)}</p>
+                    <CirclePlus className="h-5 w-5 ms-4" />
+                </button>
+            </div>
+
             <div className="w-full p-2 flex lg:hidden items-center justify-center me-4">
                 <div className="flex items-center justify-center me-4 py-1 px-2 rounded-lg shadow-lg">
                     <span>{<span>{onlineUsersList.length}</span>}</span>
@@ -325,25 +384,6 @@ const Navbar: React.FC = () => {
                             ))}
                         </div>
                     )}
-                </div>
-
-                <div className="rounded-lg hover:bg-[#0FAC71] shadow-xl">
-                    <button
-                        onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                        className="lg:w-[17em] px-2 lg:px-8 py-1 rounded-md text-white flex items-center justify-between"
-                    >
-                        <div className="flex items-center">
-                            <div className="rounded-full border h-8 w-8 my-1 me-4">
-                                <img
-                                    src={user?.profile_picture_link || "img/user-avatar.png"}
-                                    className="w-full h-full object-cover rounded-full"
-                                    alt="Photo de profil"
-                                />
-                            </div>
-                            <span className="hidden md:flex">{username || 'Invité'} </span>
-                        </div>
-                        {isUserMenuOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                    </button>
                 </div>
             </div>
 
