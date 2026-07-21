@@ -10,6 +10,7 @@ import { useUser } from '@/hooks/useUser';
 import ChatDialog from '@/components/dialog/ChatDialog';
 import WaitingListDialog from '@/components/dialog/WaitingListDialog';
 import type HandHistoryEntry from '@/types/Tatami';
+import { getWebSocketUrl } from '@/lib/websocket';
 
 interface SeatDataProps {
     user_id: number;
@@ -332,7 +333,7 @@ const GameProgress: React.FC = () => {
     useEffect(() => {
         const token = localStorage.getItem('authToken');
         if (!token) return;
-        const ws = new WebSocket(`ws://localhost:8080/ws?token=${encodeURIComponent(token)}`);
+        const ws = new WebSocket(getWebSocketUrl(token));
         wsRef.current = ws;
 
         ws.onmessage = (event) => {

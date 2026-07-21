@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import type TatamiProps from '@/types/Tatami';
 import { useUser } from '@/hooks/useUser';
 import debounce from 'debounce';
+import { getWebSocketUrl } from '@/lib/websocket';
 
 
 const Lobby: React.FC = () => {
@@ -19,6 +20,7 @@ const Lobby: React.FC = () => {
     // États pour la recherche
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredTables, setFilteredTables] = useState<TatamiProps[]>([]);
+
 
     const navigate = useNavigate();
     const { user } = useUser();
@@ -244,7 +246,7 @@ const Lobby: React.FC = () => {
     useEffect(() => {
         const token = localStorage.getItem('authToken');
         if (!token) return;
-        const ws = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
+        const ws = new WebSocket(getWebSocketUrl(token));
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);

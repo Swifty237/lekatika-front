@@ -180,44 +180,6 @@ const Profile: React.FC = () => {
         }
     };
 
-    // const handleProfilePhotoSubmit = async () => {
-    //     if (!profilePhotoFile) {
-    //         showToast("Veuillez sélectionner une photo", "error");
-    //         return;
-    //     }
-    //     setUploading(true);
-    //     try {
-    //         const token = localStorage.getItem('authToken');
-    //         const formData = new FormData();
-    //         formData.append('profilePicture', profilePhotoFile);
-
-    //         const response = await fetch(`${import.meta.env.VITE_LEKATIKA_SERVER_URI}/api/user/profile-picture`, {
-    //             method: 'POST',
-    //             headers: {
-    //                 'Authorization': `Bearer ${token}`
-    //             },
-    //             body: formData
-    //         });
-
-    //         if (response.ok) {
-    //             showToast("Photo de profil mise à jour avec succès", "success");
-    //             setProfilePhotoFile(null);
-    //             // Réinitialiser l'input
-    //             const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-    //             if (input) input.value = '';
-    //             await refreshUser();
-    //         } else {
-    //             const error = await response.json();
-    //             showToast(error.error || "Erreur lors de l'upload", "error");
-    //         }
-    //     } catch (err) {
-    //         console.error(err);
-    //         showToast("Erreur réseau", "error");
-    //     } finally {
-    //         setUploading(false);
-    //     }
-    // };
-
     return (
         <MainLayout>
             <div className="flex flex-col items-center">
