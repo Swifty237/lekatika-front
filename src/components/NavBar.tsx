@@ -8,6 +8,7 @@ import { useUser } from '@/hooks/useUser';
 import type UserProps from '@/types/User';
 import debounce from "debounce";
 import searchUsers from '@/hooks/useSearchProfile';
+import { getWebSocketUrl } from '@/lib/websocket';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
@@ -148,7 +149,7 @@ const Navbar: React.FC = () => {
     useEffect(() => {
         const token = localStorage.getItem('authToken');
         if (!token) return;
-        const ws = new WebSocket(`ws://localhost:8080/ws?token=${encodeURIComponent(token)}`);
+        const ws = new WebSocket(getWebSocketUrl(token));
         wsRef.current = ws;
 
         ws.onmessage = (event) => {
