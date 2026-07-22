@@ -163,8 +163,8 @@ const Navbar: React.FC = () => {
     }, []);
 
     return (
-        <nav id="main-nav" className="grid grid-cols-1 lg:flex justify-center bg-green-gradient shadow-md text-sm fixed top-0 left-0 w-full z-50 backdrop-blur-2xl transition-shadow duration-300">
-            <div className="container flex justify-between items-center">
+        <nav id="main-nav" className="flex flex-col items-center bg-green-gradient shadow-md text-sm sticky top-0 left-0 px-2 z-50 backdrop-blur-2xl w-full transition-shadow duration-300">
+            <div className="container mx-auto flex justify-between items-center w-full">
                 {/* Logo */}
                 <div className="flex items-center justify-between">
                     <Link to="/lobby" className="w-[65px] lg:w-[100px] bg-red-gradient m-2 rounded-sm">
@@ -173,7 +173,7 @@ const Navbar: React.FC = () => {
 
                     <Link to="/lobby" className="flex hover:bg-[#0FAC71] transition items-center py-1 px-4 shadow-xl rounded-lg">
                         <HomeIcon className="h-5 w-5 me-2" />
-                        <span className="hidden lg:flex">Lobby</span>
+                        <span className="flex sm:hidden lg:flex">Lobby</span>
                     </Link>
                 </div>
 
@@ -182,7 +182,7 @@ const Navbar: React.FC = () => {
                         <SelectTrigger className="shadow-lg w-[175px]">
                             <SelectValue placeholder="" />
                         </SelectTrigger>
-                        <SelectContent className="text-white bg-[#0FAC71] shadow-lg">
+                        <SelectContent className="text-white shadow-lg bg-[#0FAC71]">
                             <SelectItem value="0">Points découverte</SelectItem>
                             <SelectItem value="1">Points réels</SelectItem>
                         </SelectContent>
@@ -211,7 +211,7 @@ const Navbar: React.FC = () => {
                                     alt="Photo de profil"
                                 />
                             </div>
-                            <span className="hidden md:flex">{username || 'Invité'} </span>
+                            <span className="flex sm:hidden lg:flex">{username || 'Invité'} </span>
                         </div>
                         {isUserMenuOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                     </button>
@@ -222,7 +222,7 @@ const Navbar: React.FC = () => {
                         <SelectTrigger className="shadow-lg w-[175px]">
                             <SelectValue placeholder="" />
                         </SelectTrigger>
-                        <SelectContent className="text-white bg-[#0FAC71] shadow-lg">
+                        <SelectContent className="text-white shadow-lg bg-[#0FAC71]">
                             <SelectItem value="0">Points découverte</SelectItem>
                             <SelectItem value="1">Points réels</SelectItem>
                         </SelectContent>
@@ -318,7 +318,7 @@ const Navbar: React.FC = () => {
                     <SelectTrigger className="shadow-lg w-[175px]">
                         <SelectValue placeholder="" />
                     </SelectTrigger>
-                    <SelectContent className="text-white bg-[#0FAC71] shadow-lg">
+                    <SelectContent className="text-white shadow-lg bg-[#0FAC71]">
                         <SelectItem value="0">Points découverte</SelectItem>
                         <SelectItem value="1">Points réels</SelectItem>
                     </SelectContent>

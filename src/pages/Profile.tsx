@@ -7,6 +7,7 @@ import { showToast } from '@/components/CustomToast';
 import { Link } from 'react-router-dom';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import ConfirmDialog from '@/components/dialog/ConfirmDialog';
 
 const Profile: React.FC = () => {
 
@@ -18,6 +19,8 @@ const Profile: React.FC = () => {
     const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
     const [bio, setBio] = useState<string>(user?.bio || '');
     const [isBioUpdating, setIsBioUpdating] = useState(false);
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     // États pour le recadrage
     const [cropModalOpen, setCropModalOpen] = useState(false);
@@ -150,6 +153,48 @@ const Profile: React.FC = () => {
 
     const handleSubmit = async () => { }
 
+    const handleConfirmeDelete = () => {
+        // Vérifier que le solde réel est à 0
+        if (user?.real_chips_amount_bankroll && user.real_chips_amount_bankroll !== 0) {
+            showToast("Vous ne pouvez pas supprimer votre compte car vous avez des points réels", "error");
+            return;
+        }
+        setConfirmDeleteOpen(true);
+    };
+
+    const handleDeleteAccount = async () => {
+        setDeleting(true);
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`${import.meta.env.VITE_LEKATIKA_SERVER_URI}/api/user/account`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            const data = await response.json();
+            if (response.ok) {
+                showToast("Votre compte a été supprimé avec succès", "success");
+                // Déconnecter l'utilisateur
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userID');
+                localStorage.removeItem('username');
+                localStorage.removeItem('freeChipsAmountBankroll');
+                // Rediriger vers la page de connexion
+                window.location.href = '/login';
+            } else {
+                showToast(data.error || "Erreur lors de la suppression", "error");
+            }
+        } catch (err) {
+            console.error(err);
+            showToast("Erreur réseau", "error");
+        } finally {
+            setDeleting(false);
+            setConfirmDeleteOpen(false);
+        }
+    };
+
 
     const handleBioSubmit = async () => {
         const token = localStorage.getItem('authToken');
@@ -225,7 +270,7 @@ const Profile: React.FC = () => {
                                     type="file"
                                     accept="image/*"
                                     onChange={handleProfilePhotoChange}
-                                    className="hover:cursor-pointer hover:border transition-colors rounded-sm"
+                                    className="hover:cursor-pointer border border-transparent hover:border-white transition-colors rounded-sm"
                                 />
                                 {photos.length > 0 && <p className="text-sm mt-1">{photos.length} photo(s) sélectionnée(s)</p>}
                             </div>
@@ -290,7 +335,7 @@ const Profile: React.FC = () => {
                             />
                         </div>
                         <button
-                            className="text-sm flex justify-self-end m-4 items-center hover:border shadow-xl px-8 py-2 rounded-lg"
+                            className="text-sm flex justify-self-end m-4 items-center border border-transparent hover:border-white shadow-xl px-8 py-2 rounded-lg"
                             onClick={handleBioSubmit}
                             disabled={isBioUpdating}
                         >
@@ -358,7 +403,7 @@ const Profile: React.FC = () => {
                                     accept="image/*"
                                     multiple
                                     onChange={handlePhotoUpload}
-                                    className="w-full p-1 hover:cursor-pointer hover:border transition-colors rounded-sm focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
+                                    className="w-full p-1 hover:cursor-pointer border border-transparent hover:border-white transition-colors rounded-sm focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
                                 />
                                 <div className="flex mb-2">
                                     <span className="ps-2 me-2">Recto : </span>
@@ -372,7 +417,7 @@ const Profile: React.FC = () => {
                                     accept="image/*"
                                     multiple
                                     onChange={handlePhotoUpload}
-                                    className="col-span-2 w-full p-1 hover:cursor-pointer hover:border transition-colors rounded-sm focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
+                                    className="col-span-2 w-full p-1 hover:cursor-pointer border border-transparent hover:border-white transition-colors rounded-sm focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
                                 />
                                 <div className="flex">
                                     <span className="ps-2 me-2">Verso : </span>
@@ -380,7 +425,7 @@ const Profile: React.FC = () => {
                                 </div>
 
                                 {/* <button className="text-sm flex items-center justify-self-end hover:border shadow-xl px-8 py-2 rounded-lg" onClick={handleSubmit} disabled={uploading}> */}
-                                <button className="text-sm flex items-center justify-self-end hover:border shadow-xl px-8 py-2 rounded-lg" onClick={handleSubmit} disabled>
+                                <button className="text-sm flex items-center justify-self-end border border-transparent hover:border-white shadow-xl px-8 py-2 rounded-lg" onClick={handleSubmit} disabled>
                                     {uploading ? (
                                         <>
                                             <Loader className="animate-spin" />
@@ -490,7 +535,7 @@ const Profile: React.FC = () => {
                         {/* La div vide permet de remplir la première case de la grille */}
                         <div></div>
                         {/* <button className="text-sm flex items-center justify-self-end hover:border shadow-xl px-8 py-2 mb-4 me-4 rounded-lg" onClick={handleSubmit} disabled={uploading}> */}
-                        <button className="text-sm flex items-center justify-self-end hover:border shadow-xl px-8 py-2 mb-4 me-4 rounded-lg" onClick={handleSubmit} disabled>
+                        <button className="text-sm flex items-center justify-self-end border border-transparent hover:border-white shadow-xl px-8 py-2 mb-4 me-4 rounded-lg" onClick={handleSubmit} disabled>
                             {uploading ? (
                                 <>
                                     <Loader className="animate-spin" />
@@ -554,7 +599,7 @@ const Profile: React.FC = () => {
                         </div>
 
                         {/* <button className="text-sm flex items-center justify-self-end hover:border shadow-xl px-8 py-2 mb-4 me-4 rounded-lg" onClick={handleSubmit} disabled={uploading}> */}
-                        <button className="text-sm flex items-center justify-self-end hover:border shadow-xl px-8 py-2 mb-4 me-4 rounded-lg" onClick={handleSubmit} disabled>
+                        <button className="text-sm flex items-center justify-self-end border border-transparent hover:border-white shadow-xl px-8 py-2 mb-4 me-4 rounded-lg" onClick={handleSubmit} disabled>
                             {uploading ? (
                                 <>
                                     <Loader className="animate-spin" />
@@ -573,7 +618,7 @@ const Profile: React.FC = () => {
                         Informations bancaire
                     </h2>
 
-                    <div className="text-sm grid grid-cols-1 xl:grid-cols-2 border shadow-md rounded-md gap-3 lg:gap-4 hover:bg-[#0FAC71]">
+                    <div className="text-sm grid grid-cols-1 xl:grid-cols-2 border shadow-md rounded-md gap-3 lg:gap-4 mb-8">
 
                         <div className="grid grid-cols-3 gap-3 lg:gap-4 p-4 hover:bg-[#0FAC71]">
                             <label htmlFor="rib" className="font-bold me-4">RIB : </label>
@@ -598,14 +643,14 @@ const Profile: React.FC = () => {
                                 accept="image/*"
                                 multiple
                                 onChange={handlePhotoUpload}
-                                className="col-span-2 w-full p-1 hover:cursor-pointer hover:border transition-colors rounded-sm focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
+                                className="col-span-2 w-full p-1 hover:cursor-pointer border border-transparent hover:border-white transition-colors rounded-sm focus:outline-none focus:ring-2 focus:ring-[#0FAC71] focus:border-[#0FAC71]"
                             />
                             {photos.length > 0 && <p className="text-sm mt-1">{photos.length} photo(s) sélectionnée(s)</p>}
                         </div>
 
                         <div></div>
                         {/* <button className="text-sm flex items-center justify-self-end hover:border shadow-xl px-8 py-2 mb-4 me-4 rounded-lg" onClick={handleSubmit} disabled={uploading}> */}
-                        <button className="text-sm flex items-center justify-self-end hover:border shadow-xl px-8 py-2 mb-4 me-4 rounded-lg" onClick={handleSubmit} disabled>
+                        <button className="text-sm flex items-center justify-self-end border border-transparent hover:border-white shadow-xl px-8 py-2 mb-4 me-4 rounded-lg" onClick={handleSubmit} disabled>
                             {uploading ? (
                                 <>
                                     <Loader className="animate-spin" />
@@ -618,7 +663,33 @@ const Profile: React.FC = () => {
                             )}
                         </button>
                     </div>
+
+                    <h2 className="font-bold mb-2 text-red-700">
+                        Suppression du compte
+                    </h2>
+
+                    <div className="text-sm grid grid-cols-1 xl:grid-cols-2 border border-red-700 shadow-md rounded-md gap-3 lg:gap-4 mb-8 text-red-700">
+
+                        <div className="p-4 flex rounded-md">
+                            <span className="text-justify text-white">Une fois que vous aurez confirmez la suppression votre compte utilisateur et vos données personnelles seront définitvement supprimés</span>
+                        </div>
+
+                        {/* <button className="text-sm flex items-center justify-self-end hover:border shadow-xl px-8 py-2 mb-4 me-4 rounded-lg" onClick={handleSubmit} disabled={uploading}> */}
+                        <button
+                            className="text-sm flex items-center justify-self-end text-white hover:bg-red-700 shadow-xl px-8 py-2 my-4 me-4 rounded-lg"
+                            onClick={handleConfirmeDelete}
+                            disabled={deleting}
+                        >
+                            {deleting ? <Loader className="animate-spin" /> : <><Send className="w-4 h-4 me-2" /><span>Valider</span></>}
+                        </button>
+                    </div>
                 </div>
+
+                <ConfirmDialog
+                    open={confirmDeleteOpen}
+                    onConfirm={handleDeleteAccount}
+                    onCancel={() => setConfirmDeleteOpen(false)}
+                />
             </div>
         </MainLayout>
     );
