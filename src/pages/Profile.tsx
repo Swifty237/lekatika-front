@@ -13,6 +13,14 @@ const Profile: React.FC = () => {
 
     const { user, refreshUser } = useUser();
 
+    const DEFAULT_CROP: Crop = {
+        unit: '%',
+        width: 100,
+        height: 100,
+        x: 0,
+        y: 0,
+    };
+
     const photoInputRef = useRef<HTMLInputElement>(null);
     const [photos, setPhotos] = useState<File[]>([]);
     const [uploading, setUploading] = useState(false);
@@ -25,15 +33,12 @@ const Profile: React.FC = () => {
     // États pour le recadrage
     const [cropModalOpen, setCropModalOpen] = useState(false);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-    const [crop, setCrop] = useState<Crop>({
-        unit: '%',
-        width: 80,
-        height: 80,
-        x: 10,
-        y: 10,
-    });
+    const [crop, setCrop] = useState<Crop>(DEFAULT_CROP);
     const [completedCrop, setCompletedCrop] = useState<Crop | null>(null);
-    const imgRef = useRef<HTMLImageElement | null>(null);
+    const [isImageLoaded, setIsImageLoaded] = useState(false);
+
+    const imgRef = useRef<HTMLImageElement | null>(null);        // pour le recadrage
+    const profileImgRef = useRef<HTMLImageElement | null>(null); // pour l'affichage
 
 
     const handleProfilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,32 +59,34 @@ const Profile: React.FC = () => {
     };
 
     // Fonction pour obtenir l'image recadrée en tant que fichier
-    const getCroppedImage = async (): Promise<File | null> => {
-        if (!imgRef.current || !completedCrop) return null;
+    const getCroppedImage = async (cropToUse: Crop): Promise<File | null> => {
+        if (!imgRef.current || !isImageLoaded) {
+            console.warn("Image non chargée");
+            return null;
+        }
 
         const canvas = document.createElement('canvas');
         const image = imgRef.current;
-        const crop = completedCrop;
 
         const scaleX = image.naturalWidth / image.width;
         const scaleY = image.naturalHeight / image.height;
 
-        canvas.width = crop.width! * scaleX;
-        canvas.height = crop.height! * scaleY;
+        canvas.width = cropToUse.width! * scaleX;
+        canvas.height = cropToUse.height! * scaleY;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return null;
 
         ctx.drawImage(
             image,
-            crop.x! * scaleX,
-            crop.y! * scaleY,
-            crop.width! * scaleX,
-            crop.height! * scaleY,
+            cropToUse.x! * scaleX,
+            cropToUse.y! * scaleY,
+            cropToUse.width! * scaleX,
+            cropToUse.height! * scaleY,
             0,
             0,
-            crop.width! * scaleX,
-            crop.height! * scaleY
+            cropToUse.width! * scaleX,
+            cropToUse.height! * scaleY
         );
 
         return new Promise((resolve) => {
@@ -94,20 +101,44 @@ const Profile: React.FC = () => {
         });
     };
 
+
     const handleCropConfirm = async () => {
-        if (!profilePhotoFile) return;
+        if (!profilePhotoFile || !isImageLoaded) {
+            showToast("L'image n'est pas encore chargée, veuillez réessayer", "error");
+            return;
+        }
+
+        // Déterminer quel crop utiliser : le crop final s'il existe, sinon le crop en cours
+        const cropToUse = completedCrop || crop;
+
+        // Vérifier si c'est le crop par défaut (100% de l'image)
+        const isDefault =
+            cropToUse.width === DEFAULT_CROP.width &&
+            cropToUse.height === DEFAULT_CROP.height &&
+            cropToUse.x === DEFAULT_CROP.x &&
+            cropToUse.y === DEFAULT_CROP.y;
+
         setUploading(true);
         try {
-            const croppedFile = await getCroppedImage();
-            if (!croppedFile) {
-                showToast("Erreur lors du recadrage", "error");
-                setUploading(false);
-                return;
+            let fileToUpload: File;
+            if (isDefault) {
+                // Utiliser le fichier original tel quel
+                fileToUpload = profilePhotoFile;
+            } else {
+                // Recadrer via le canvas
+                const croppedFile = await getCroppedImage(cropToUse);
+                if (!croppedFile) {
+                    showToast("Erreur lors du recadrage", "error");
+                    setUploading(false);
+                    return;
+                }
+                fileToUpload = croppedFile;
             }
-            // Envoyer l'image recadrée au serveur
+
+            // Envoyer au serveur
             const token = localStorage.getItem('authToken');
             const formData = new FormData();
-            formData.append('profilePicture', croppedFile);
+            formData.append('profilePicture', fileToUpload);
 
             const response = await fetch(`${import.meta.env.VITE_LEKATIKA_SERVER_URI}/api/user/profile-picture`, {
                 method: 'POST',
@@ -253,9 +284,10 @@ const Profile: React.FC = () => {
                                     <h2 className="font-semibold mb-2">Photo de profil : </h2>
                                     <div className="w-[150px] h-[150px] shadow-xl rounded-full mb-4 overflow-hidden">
                                         <img
-                                            src={user?.profile_picture_link || "/img/user-avatar.png"}
-                                            className="w-full h-full object-cover"
+                                            ref={profileImgRef}
+                                            src={imageToCrop || user?.profile_picture_link || "/img/user-avatar.png"}
                                             alt="Photo de profil"
+                                            className="w-full h-full object-cover"
                                         />
                                     </div>
                                 </div>
@@ -294,6 +326,7 @@ const Profile: React.FC = () => {
                                             src={imageToCrop}
                                             alt="À recadrer"
                                             className="max-h-[60vh] object-contain"
+                                            onLoad={() => setIsImageLoaded(true)}
                                         />
                                     </ReactCrop>
                                     <div className="flex justify-end gap-3 mt-4">
