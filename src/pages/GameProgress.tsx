@@ -11,6 +11,7 @@ import ChatDialog from '@/components/dialog/ChatDialog';
 import WaitingListDialog from '@/components/dialog/WaitingListDialog';
 import type HandHistoryEntry from '@/types/Tatami';
 import { getWebSocketUrl } from '@/lib/websocket';
+import { useTatamiSize } from '@/hooks/useTatamiSize';
 
 interface SeatDataProps {
     user_id: number;
@@ -47,11 +48,9 @@ const GameProgress: React.FC = () => {
 
     const { user: currentUser, refreshUser } = useUser();
     const API_URL = import.meta.env.VITE_LEKATIKA_SERVER_URI;
+    const { width: tatamiWidth, height: tatamiHeight } = useTatamiSize();
 
     const [tatami, setTatami] = useState<TatamiProps>();
-    const [isHeightAbove1200, setIsHeightAbove1200] = useState(false);
-    const [isHeightAbove800, setIsHeightAbove800] = useState(false);
-    const [isHeightAbove640, setIsHeightAbove640] = useState(false);
     const [inBreak, setInBreak] = useState(false);
     const [sitOnTableDialogOpen, setSitOnTableDialogOpen] = useState(false)
     const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
@@ -64,18 +63,16 @@ const GameProgress: React.FC = () => {
     const [activeTimerSeat, setActiveTimerSeat] = useState<number | null>(null);
     const [WaitingListOpen, setWaitingListOpen] = useState(false);
     const [handHistory, setHandHistory] = useState<HandHistoryEntry[]>([]);
+    const [bottomBarHeight, setBottomBarHeight] = useState(0);
 
+    const myCards = ['c3', 'd5', 's10', 's9', 'h10'];
 
-    // const previousTurnSeatRef = useRef<number | undefined>(undefined);
-    // const previousRoundRef = useRef<number | undefined>(undefined);
     const previousMessagesLength = useRef(0);
     const wsRef = useRef<WebSocket | null>(null);
     const readMessages = useRef<Set<string>>(new Set());
     const chatOpenRef = useRef(false);
     const currentUserIdRef = useRef(0);
-
-
-    // const previousTurnRef = useRef<number | undefined>(undefined);
+    const bottomBarRef = useRef<HTMLDivElement>(null);
 
     const waitingUsernames = tatami?.waitingListUsernames || [];
 
@@ -97,6 +94,23 @@ const GameProgress: React.FC = () => {
         });
     }, [tatami]);
 
+    // Calcul de la hauteur de la barre d'action
+    useEffect(() => {
+        if (!bottomBarRef.current) return;
+
+        const updateHeight = () => {
+            if (bottomBarRef.current) {
+                setBottomBarHeight(bottomBarRef.current.offsetHeight);
+            }
+        };
+        updateHeight();
+
+        const observer = new ResizeObserver(updateHeight);
+        observer.observe(bottomBarRef.current);
+
+        return () => observer.disconnect();
+    }, []);
+
     useEffect(() => {
         if (currentUser) {
             currentUserIdRef.current = currentUser.user_id;
@@ -110,11 +124,7 @@ const GameProgress: React.FC = () => {
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type, ...payload }));
         } else {
-            // Option 1 : attendre l'ouverture (promesse)
-            // Option 2 : recréer la connexion WebSocket
             console.warn("WebSocket non prête, tentative de reconnexion...");
-            // Vous pouvez ici réinitialiser la WebSocket
-            // Pour l'instant, on affiche un toast d'erreur
             showToast("Connexion WebSocket perdue, réessayez", "error");
         }
     };
@@ -127,19 +137,6 @@ const GameProgress: React.FC = () => {
             content: content,
         });
     };
-
-    // Détection de la hauteur de l'écran
-    useEffect(() => {
-        const checkHeight = () => {
-            const height = window.innerHeight;
-            setIsHeightAbove800(height > 800);
-            setIsHeightAbove640(height > 640);
-            setIsHeightAbove1200(height > 1200);
-        };
-        checkHeight();
-        window.addEventListener('resize', checkHeight);
-        return () => window.removeEventListener('resize', checkHeight);
-    }, []);
 
     // Fonction centrale pour quitter la table
     const performLeave = async () => {
@@ -163,13 +160,12 @@ const GameProgress: React.FC = () => {
 
     // Appelée par le bouton "Quitter"
     const handleLeaveTatami = async () => {
-        // Marqueur pour indiquer une sortie volontaire
         sessionStorage.setItem('manualLeave', 'true');
         await performLeave();
         window.close();
     };
 
-    // Gérer la fermeture non contrôlée (croix de l'onglet, rafraîchissement)
+    // Gérer la fermeture non contrôlée
     useEffect(() => {
         const handleBeforeUnload = async () => {
             const isManualLeave = sessionStorage.getItem('manualLeave');
@@ -182,32 +178,14 @@ const GameProgress: React.FC = () => {
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, []);
 
-    // Fonction pour déterminer la classe de hauteur du conteneur
-    const getContainerHeightClass = () => {
-        if (isHeightAbove1200) return 'h-[65em]';
-        if (isHeightAbove800) return 'h-[45em]';
-        if (isHeightAbove640) return 'h-[30em]';
-        return 'h-[25em]';
-    };
-
-    const getContainerAnotherHeightClass = () => {
-        if (isHeightAbove1200) return 'h-[65em]';
-        if (isHeightAbove800) return 'h-[45em]';
-        if (isHeightAbove640) return 'h-[38em]';
-        return 'h-[28em]';
-    };
-
     useEffect(() => {
-        // Si un tableId est fourni dans l'URL, on le stocke
         const tableIdFromUrl = searchParams.get('tableId');
         if (tableIdFromUrl) {
             sessionStorage.setItem('currentTableID', tableIdFromUrl);
-            // Optionnel : nettoyer l'URL
             window.history.replaceState({}, '', '/game-progress');
         }
     }, [searchParams]);
 
-    // Ajoutez cette fonction avant le composant ou à l'intérieur
     const getPendingSitList = (tableId: string | null): PendingSitInfo[] => {
         if (!tableId) return [];
         const key = `pending_sit_${tableId}`;
@@ -215,7 +193,6 @@ const GameProgress: React.FC = () => {
         if (!data) return [];
         try {
             const parsed = JSON.parse(data);
-            // Si c'est un tableau, le retourner, sinon le convertir en tableau (rétrocompatibilité)
             if (Array.isArray(parsed)) return parsed;
             return [parsed];
         } catch {
@@ -247,7 +224,6 @@ const GameProgress: React.FC = () => {
                     amount: amount,
                     timestamp: Date.now(),
                 };
-                // Ajouter la nouvelle demande et stocker la liste mise à jour
                 const updatedList = [...existingList, newEntry];
                 sessionStorage.setItem(key, JSON.stringify(updatedList));
 
@@ -257,7 +233,6 @@ const GameProgress: React.FC = () => {
             }
 
             if (response.ok) {
-                // Succès immédiat
                 setTatami(data.table);
                 localStorage.setItem('currentTatami', JSON.stringify(data.table));
                 setSitOnTableDialogOpen(false);
@@ -294,7 +269,6 @@ const GameProgress: React.FC = () => {
                     setTatami(data.table);
                     sessionStorage.removeItem(`pending_sit_${tableId}`);
 
-                    // Initialiser inBreak pour le joueur courant
                     const currentSeatIndex = data.table.seats?.findIndex((seat: SeatDataProps) => seat.user_id === currentUser?.user_id);
                     if (currentSeatIndex !== undefined && currentSeatIndex !== -1) {
                         setInBreak(data.table.pausedSeats?.[currentSeatIndex] || false);
@@ -302,11 +276,8 @@ const GameProgress: React.FC = () => {
 
                     if (data.table.chat_messages) {
                         setChatMessages(data.table.chat_messages);
-                        // Marquer tous les messages comme lus si le chat est ouvert, sinon aucun
                         if (openChatDialog) {
                             data.table.chat_messages.forEach((msg: ChatMessageProps) => readMessages.current.add(msg.id));
-                        } else {
-                            // Sinon, on garde le Set vide
                         }
                         previousMessagesLength.current = data.table.chat_messages.length;
                     }
@@ -316,7 +287,6 @@ const GameProgress: React.FC = () => {
                     }
                     localStorage.setItem('currentTatami', JSON.stringify(data.table));
                 } else {
-                    // setSeatCardCounts(prev => prev.map(() => ({ hand: 0, played: 0 })));
                     console.log("Erreur chargement table, fermeture");
                     window.close();
                 }
@@ -357,10 +327,8 @@ const GameProgress: React.FC = () => {
                         const fetchedData = await response.json();
                         const updatedTable = fetchedData.table;
 
-                        // Supprimer la demande en attente car la table a été mise à jour
                         sessionStorage.removeItem(`pending_sit_${tableId}`);
 
-                        // Mettre à jour inBreak pour le joueur courant
                         const currentSeatIndex = updatedTable.seats?.findIndex((seat: SeatDataProps) => seat.user_id === currentUserIdRef.current);
                         if (currentSeatIndex !== undefined && currentSeatIndex !== -1) {
                             setInBreak(updatedTable.pausedSeats?.[currentSeatIndex] || false);
@@ -370,7 +338,6 @@ const GameProgress: React.FC = () => {
                             setSeatCards(updatedTable.seatCards);
                         }
 
-                        // Mettre à jour tatami avec les sièges protégés
                         setTatami(updatedTable);
                         sessionStorage.removeItem(`pending_sit_${tableId}`);
 
@@ -402,10 +369,9 @@ const GameProgress: React.FC = () => {
 
             if (data.type === 'GAME_EVENT') {
                 if (!data.tableId || data.tableId === sessionStorage.getItem('currentTableID')) {
-                    // Afficher le toast pour tous les messages (Korat !, Double Korat !, Fin de manche, etc.)
                     showToast(data.message, data.isError ? 'error' : 'success');
                 }
-                return; // On évite de traiter d'autres événements pour ce type
+                return;
             }
 
             if (data.type === 'SEAT_BET_UPDATE' && data.tableId === sessionStorage.getItem('currentTableID')) {
@@ -415,7 +381,6 @@ const GameProgress: React.FC = () => {
                     return;
                 }
 
-                // Ignorer si le siège est en pause
                 if (tatami?.pausedSeats?.[seatIndex]) {
                     console.log("Ignorer SEAT_BET_UPDATE pour un siège en pause", seatIndex);
                     return;
@@ -461,24 +426,19 @@ const GameProgress: React.FC = () => {
             }
 
             if (data.type === 'DEALING_END' && data.tableId === sessionStorage.getItem('currentTableID')) {
-
-                // Forcer la mise à jour de isDealing à false
                 setTatami(prev => prev ? { ...prev, isDealing: false } : prev);
                 console.log("tatami?.isDealing" + tatami?.isDealing);
-
                 return;
             }
 
             if (data.type === 'HISTORY_UPDATE' && data.tableId === sessionStorage.getItem('currentTableID')) {
                 setHandHistory(data.history || []);
-                return; // Ne pas traiter comme un GAME_EVENT
+                return;
             }
 
             if (data.type === 'CHAT_MESSAGE' && data.tableId === sessionStorage.getItem('currentTableID')) {
                 const newMsg = data.message;
-                // Ajouter le message à la liste
                 setChatMessages(prev => [...prev, newMsg]);
-                // Si le chat est fermé et que le message n'est pas du joueur courant, incrémenter le compteur
                 if (!chatOpenRef.current && newMsg.user_id !== currentUserIdRef.current) {
                     setNewChatMessages(prev => prev + 1);
                 }
@@ -492,7 +452,6 @@ const GameProgress: React.FC = () => {
     const handleOpenChat = () => {
         setOpenChatDialog(true);
         chatOpenRef.current = true;
-        // Marquer tous les messages comme lus
         chatMessages.forEach(msg => readMessages.current.add(msg.id));
         setNewChatMessages(0);
         previousMessagesLength.current = chatMessages.length;
@@ -506,7 +465,6 @@ const GameProgress: React.FC = () => {
     const handleCardDoubleClick = (seatNumber: number, index: number) => {
         const tableId = sessionStorage.getItem('currentTableID');
         if (!tableId) return;
-        // Envoyer le message WebSocket pour jouer la carte
         sendWSMessage('PLAY_CARD', {
             tableId: tableId,
             seatIndex: seatNumber - 1,
@@ -514,7 +472,6 @@ const GameProgress: React.FC = () => {
         });
     };
 
-    // 1. Définir les positions avec un type Record<number, string> pour éviter l’erreur d’index
     const seatPositions: Record<number, string> = {
         1: "absolute -top-6 left-1/2 transform -translate-x-1/2",
         2: "absolute top-1/2 -right-6 transform -translate-y-1/2",
@@ -612,9 +569,7 @@ const GameProgress: React.FC = () => {
             showToast("Vous n'êtes pas assis", "error");
             return;
         }
-        // Basculer localement (pour une interface réactive)
         setInBreak(prev => !prev);
-        // Envoyer au serveur
         sendWSMessage('TOGGLE_BREAK', {
             tableId: tableId,
             seatIndex: seatIndex,
@@ -638,8 +593,6 @@ const GameProgress: React.FC = () => {
                     const isConnected = tatami.seatsConnected && tatami.seatsConnected[idx] === true;
                     const seatNumber = idx + 1;
                     const userIdValue = seat.user_id;
-                    // const playerIndex = tatami.players?.indexOf(userIdValue);
-                    // const playerUsername = playerIndex !== -1 ? tatami.player_usernames?.[playerIndex] : null;
                     const isDealer = tatami?.dealer_seat_index === idx;
                     const isRevealed = tatami.revealedSeats && tatami.revealedSeats[idx] === true;
                     const isPaused = tatami.pausedSeats?.[idx] || false;
@@ -655,13 +608,11 @@ const GameProgress: React.FC = () => {
                     let occupantName = undefined;
                     let chipsAmount = seat.amount_at_stake;
 
-                    // Si le siège est vide mais qu'il y a une demande en attente pour ce siège
                     if (!isOccupied && pendingForThisSeat) {
                         isOccupied = true;
                         occupantName = pendingForThisSeat.username;
                         chipsAmount = pendingForThisSeat.amount;
                     } else if (isOccupied) {
-                        // comportement normal
                         const playerIndex = tatami.players?.indexOf(userIdValue);
                         const playerUsername = playerIndex !== -1 ? tatami.player_usernames?.[playerIndex] : null;
                         occupantName = (isCurrentUser ? currentUser.username : playerUsername || `Joueur ${userIdValue}`);
@@ -680,7 +631,7 @@ const GameProgress: React.FC = () => {
                                     setSitOnTableDialogOpen(true);
                                 } : undefined}
                                 showCards={showCards}
-                                handCards={isOccupied ? seatCards[idx]?.hand || [] : []}
+                                handCards={isOccupied ? myCards || [] : []}
                                 playedCards={isOccupied ? seatCards[idx]?.played || [] : []}
                                 isConnected={isConnected}
                                 seatBet={seatBets[idx] || 0}
@@ -699,7 +650,9 @@ const GameProgress: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen grid grid-cols-1 bg-green-gradient font-suse overflow-y-auto justify-between w-full">
+        <div
+            className="min-h-screen bg-green-gradient font-suse w-full overflow-hidden text-xs sm:text-lg relative"
+        >
             {/* Image de fond */}
             <div
                 className="absolute inset-0 w-full h-full bg-center bg-no-repeat bg-contain opacity-10 blur-sm bg-[#e74c3c] pointer-events-none"
@@ -710,91 +663,35 @@ const GameProgress: React.FC = () => {
                 }}
             />
 
-            <div className="mb-14">
-                <div className={`${getContainerHeightClass()}`}>
-                    <div className={`flex items-center justify-center m-2 min-w-[55em] overflow-auto ${getContainerAnotherHeightClass()}`}>
-                        {isHeightAbove1200 &&
-                            // Version pour hauteur > 1200px
-                            <div className="bg-green-gradient p-[2px] rounded-xl shadow-lg">
-                                <div className="relative bg-green-gradient w-[35em] 2md:w-[37em] 2lg:w-[57em] h-[37em] 2sm:h-[33em] 2md:h-[37em] rounded-xl shadow-xl">
-                                    {renderSeats()}
-                                    <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
-                                        <p className="text-sm pb-2">{tatami.name}</p>
-                                        <p>Pot : {tatami.pot} PTS</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                        }
-
-                        {isHeightAbove800 && !isHeightAbove1200 &&
-                            // Version pour hauteur > 800px
-                            <div className="bg-green-gradient p-[2px] rounded-xl shadow-lg">
-                                <div className="relative bg-green-gradient w-[37em] 2lg:w-[57em] h-[28em] rounded-xl shadow-xl">
-                                    {renderSeats()}
-                                    <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
-                                        <p className="text-sm pb-2">{tatami.name}</p>
-                                        <p>Pot : {tatami.pot} PTS</p>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-
-                        {isHeightAbove640 && !isHeightAbove800 &&
-                            // Version pour hauteur  800px
-                            <div className="bg-green-gradient p-[2px] rounded-xl shadow-xl">
-                                <div className="relative bg-green-gradient w-[35em] 2md:w-[37em] 2lg:w-[57em] h-[26em] rounded-xl shadow-xl">
-                                    {renderSeats()}
-                                    <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
-                                        <p className="text-sm pb-2">{tatami.name}</p>
-                                        <p>Pot : {tatami.pot} PTS</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                        }
-
-                        {!isHeightAbove640 &&
-                            // Version pour hauteur  800px
-                            <div className="bg-green-gradient p-[2px] rounded-xl shadow-lg">
-                                <div className="relative bg-green-gradient w-[35em] 2md:w-[37em] 2lg:w-[57em] h-[25em] rounded-xl shadow-xl">
-                                    {renderSeats()}
-                                    <div className="flex flex-col items-center justify-center h-full text-white text-lg font-bold capitalize">
-                                        <p className="text-sm pb-2">{tatami.name}</p>
-                                        <p>Pot : {tatami.pot} PTS</p>
-                                    </div>
-                                </div>
-                            </div>
-                        }
+            {/* CONTENEUR PRINCIPAL - zone au-dessus de la barre d'action */}
+            <div
+                className="relative z-10 flex flex-col items-center justify-center w-full overflow-auto"
+                style={{
+                    height: `calc(100vh - ${bottomBarHeight}px)`,
+                    minHeight: `calc(100vh - ${bottomBarHeight}px)`,
+                }}
+            >
+                {/* La table de jeu avec dimensions dynamiques */}
+                <div className="p-[2px] rounded-xl shadow-lg mb-24">
+                    <div
+                        className="relative rounded-xl shadow-xl bg-green-gradient flex flex-col items-center justify-center"
+                        style={{
+                            width: tatamiWidth,
+                            height: tatamiHeight,
+                        }}
+                    >
+                        {renderSeats()}
+                        <div className="flex flex-col items-center justify-center text-white font-bold capitalize">
+                            <p className="text-sm pb-1">{tatami.name}</p>
+                            <p>Pot : {tatami.pot} PTS</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <SitOnTableDialog
-                open={sitOnTableDialogOpen}
-                onConfirm={handleSitWithAmount} // ← on passe la fonction complète
-                onCancel={() => setSitOnTableDialogOpen(false)}
-                maxAmount={maxAmountAtStake}
-            />
-
-            <ChatDialog
-                open={openChatDialog}
-                messages={chatMessages}
-                history={handHistory}
-                usernamesBySeat={usernamesBySeat}
-                onSendMessage={sendChatMessage}
-                onCancel={handleCloseChat}
-            />
-
-            <WaitingListDialog
-                open={WaitingListOpen}
-                usernames={waitingUsernames}
-                onCancel={() => setWaitingListOpen(false)}
-            />
-
-            {/* Barre d'actions en bas */}
-            <div className="flex min-w-[55em]">
-                <div className="backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap rounded-xl mb-8 mt-14 mx-auto">
+            {/* Barre d'actions en bas - FIXED */}
+            <div ref={bottomBarRef} className="flex w-full fixed bottom-0 left-0 z-50 py-4">
+                <div className="backdrop-blur-sm py-2 px-4 flex justify-center self-center gap-4 flex-wrap rounded-xl mx-auto">
                     <button
                         onClick={handleOpenChat}
                         className="relative hover:bg-[#0FAC71] text-white font-semibold py-2 px-4 rounded-full transition duration-200 shadow-lg"
@@ -804,19 +701,19 @@ const GameProgress: React.FC = () => {
                                 {newChatMessages}
                             </div>
                         )}
-                        <MessageCircleMore className="w-5 h-5" />
+                        <MessageCircleMore className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
 
                     <button
                         onClick={() => setWaitingListOpen(true)}
                         className="relative hover:bg-[#0FAC71] text-white font-semibold py-2 px-4 rounded-md transition duration-200 shadow-lg"
                     >
-                        <List className="w-5 h-5" />
+                        <List className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                 </div>
 
                 {tatami.seats?.some(seat => seat.user_id === currentUser?.user_id) && (
-                    <div className="backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap rounded-xl mb-8 mt-14 mx-auto">
+                    <div className="backdrop-blur-sm py-2 px-4 flex justify-center self-center gap-4 flex-wrap rounded-xl mx-auto">
                         <button
                             onClick={handleSquare}
                             className="flex items-center hover:bg-[#0FAC71] text-white font-extrabold py-2 px-4 rounded-xl transition duration-200 shadow-lg"
@@ -839,14 +736,12 @@ const GameProgress: React.FC = () => {
                         </button>
                     </div>
                 )}
-                <div className="backdrop-blur-sm py-4 px-6 flex justify-center self-center gap-4 flex-wrap rounded-xl mb-8 mt-14 mx-auto">
+                <div className="backdrop-blur-sm py-2 px-4 flex justify-center self-center gap-4 flex-wrap rounded-xl mx-auto">
                     {tatami.seats?.some(seat => seat.user_id === currentUser?.user_id) && (
                         <>
                             <button onClick={handleToggleBreak} className={`flex items-center ${inBreak ? "bg-[#2c5036]/50 hover:bg-[#2c5036]" : "hover:bg-[#0FAC71]"} text-white font-semibold py-2 px-3 rounded-lg transition duration-200 shadow-lg`}>
-                                {inBreak ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+                                {inBreak ? <Play className="w-4 h-4 sm:w-5 sm:h-5" /> : <Pause className="w-4 h-4 sm:w-5 sm:h-5" />}
                             </button>
-
-                            {/* Bouton Se lever (conditionnel) */}
 
                             <button
                                 onClick={handleUnseat}
@@ -866,11 +761,32 @@ const GameProgress: React.FC = () => {
                         : 'bg-[#e74c3c]/50 hover:bg-[#e74c3c]'
                         }`}>
                         <Power className="w-5 h-5" />
-                        {/* <span>Quitter</span> */}
                     </button>
                 </div>
             </div>
+
+            <SitOnTableDialog
+                open={sitOnTableDialogOpen}
+                onConfirm={handleSitWithAmount}
+                onCancel={() => setSitOnTableDialogOpen(false)}
+                maxAmount={maxAmountAtStake}
+            />
+
+            <ChatDialog
+                open={openChatDialog}
+                messages={chatMessages}
+                history={handHistory}
+                usernamesBySeat={usernamesBySeat}
+                onSendMessage={sendChatMessage}
+                onCancel={handleCloseChat}
+            />
+
+            <WaitingListDialog
+                open={WaitingListOpen}
+                usernames={waitingUsernames}
+                onCancel={() => setWaitingListOpen(false)}
+            />
         </div>
     );
 };
-export default GameProgress; 
+export default GameProgress;

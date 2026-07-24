@@ -55,7 +55,7 @@ const Seat: React.FC<SeatProps> = ({
 
     const isSeatFour = seatID === '4';
     const isSeatThree = seatID === '3';
-    // const isSeatTwo = seatID === '2';
+    const isSeatTwo = seatID === '2';
     const isSeatOne = seatID === '1';
 
     // Début du drag sur une carte en main (uniquement pour le joueur local)
@@ -149,11 +149,11 @@ const Seat: React.FC<SeatProps> = ({
         return (
             <div
                 id={seatID}
-                className="w-20 h-20 bg-green-gradient rounded-full shadow-xl flex items-center justify-center text-white font-bold"
+                className="w-14 h-14 sm:w-20 sm:h-20 bg-green-gradient rounded-full shadow-xl flex items-center justify-center text-white font-bold"
             >
                 <Button
                     onClick={onSit}
-                    className="bg-white text-[#0FAC71] hover:text-white hover:bg-[#0FAC71] rounded-xl p-4 shadow-xl"
+                    className="bg-white text-[#0FAC71] text-xs sm:text-sm hover:text-white hover:bg-[#0FAC71] rounded-xl p-1 sm:p-3 shadow-xl"
                 >
                     S'asseoir
                 </Button>
@@ -166,9 +166,9 @@ const Seat: React.FC<SeatProps> = ({
         return (
             <div
                 id={seatID}
-                className="w-20 h-20 bg-[#0FAC71] rounded-full shadow-xl flex items-center justify-center text-white font-bold"
+                className="w-14 h-14 sm:w-20 sm:h-20 text-xs sm:text-lg bg-[#0FAC71] rounded-full shadow-xl flex items-center justify-center text-white font-bold"
             >
-                <div className="bg-white text-[#0FAC71] text-center p-4 rounded-full shadow-xl">
+                <div className="bg-white text-[#0FAC71] text-center p-3 sm:p-4 rounded-full shadow-xl">
                     Siège vide
                 </div>
             </div>
@@ -177,7 +177,7 @@ const Seat: React.FC<SeatProps> = ({
 
     // Cas 3 : siège occupé
     return (
-        <div id={seatID} className="relative w-20 h-20">
+        <div id={seatID} className="relative w-14 h-14 sm:w-20 sm:h-20">
             {isActiveTurn && (
                 <div className="absolute -bottom-2 -left-2 rounded-full shadow-md z-20">
                     <Timer timer={timer || 0} />
@@ -197,19 +197,19 @@ const Seat: React.FC<SeatProps> = ({
             )}
 
             {isDealer && isSeatFour && (
-                <div className="absolute -top-7 -right-12 rounded-full p-0.5 shadow-md z-20">
+                <div className="absolute -top-2 -right-4 w-7 h-7 sm:w-10 sm:h-10 rounded-full p-0.5 shadow-md z-20">
                     <img src="img/dealer-button.svg" className="w-full h-full object-cover" alt="" />
                 </div>
             )}
 
             {isDealer && !isSeatOne && !isSeatFour && (
-                <div className="absolute -top-7 -left-12 rounded-full p-0.5 shadow-md z-20">
+                <div className="absolute -top-2 -left-4 w-7 h-7 sm:w-10 sm:h-10 rounded-full p-0.5 shadow-md z-20">
                     <img src="img/dealer-button.svg" className="w-full h-full object-cover" alt="" />
                 </div>
             )}
 
             {/* Avatar */}
-            <div className="w-full h-full bg-[#0FAC71] rounded-full shadow-xl flex items-center justify-center text-white font-bold overflow-hidden">
+            <div className={`w-full h-full bg-[#0FAC71] rounded-full shadow-xl flex items-center justify-center ${isSeatFour && 'mt-20'} ${isSeatTwo && 'mb-20'} text-white font-bold overflow-hidden`}>
                 <img
                     src={profileData?.profile_picture_link || "img/user-avatar.png"}
                     className="w-full h-full object-cover rounded-full"
@@ -220,7 +220,7 @@ const Seat: React.FC<SeatProps> = ({
             {/* Éléments superposés (hors flux) */}
             {/* Affichage cartes visibles par un seul joueur utilisateur local */}
             {handCards.length > 0 && (
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 flex gap-1 z-10">
+                <div className={`absolute bottom-0 transform ${isSeatFour ? '-translate-x-1/4' : '-translate-x-1/2'} left-1/2 flex gap-1 z-10`}>
                     {handCards.map((cardKey, idx) => {
                         const imgSrc = showCards
                             ? cards[cardKey as keyof typeof cards] || cards.hiddenCard
@@ -231,13 +231,13 @@ const Seat: React.FC<SeatProps> = ({
                                 key={idx}
                                 draggable
                                 onDragStart={(e) => handleDragStart(e, idx)}
-                                className="w-14 h-12 p-0 border-none bg-transparent cursor-grab hover:scale-105 transition-transform"
+                                className="w-8 h-6 sm:w-14 sm:h-12 p-0 border-none bg-transparent cursor-grab hover:scale-105 transition-transform"
                                 onDoubleClick={() => onCardDoubleClick && onCardDoubleClick(idx)}
                             >
                                 <img src={imgSrc} className="w-full h-full object-cover rounded-sm shadow-md" alt="card" />
                             </button>
                         ) : (
-                            <div key={idx} className="w-14 h-12">
+                            <div key={idx} className="w-8 h-6 sm:w-14 sm:h-12">
                                 <img src={imgSrc} className="w-full h-full object-cover rounded-sm shadow-md" alt="card" />
                             </div>
                         );
@@ -246,7 +246,7 @@ const Seat: React.FC<SeatProps> = ({
             )}
 
             {inBreak && handCards.length === 0 && (
-                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-1 z-10 font-bold">
+                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-1 z-10 font-bold text-xs sm:text-lg">
                     <span className="bg-green-700  text-white p-1 w-24 text-center">
                         EN PAUSE
                     </span>
@@ -254,7 +254,7 @@ const Seat: React.FC<SeatProps> = ({
             )}
 
             {/* Nom d'utilisateur et chips */}
-            <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-white font-bold whitespace-nowrap capitalize underline shadow-sm">
+            <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-white font-bold whitespace-nowrap capitalize underline shadow-sm text-xs sm:text-lg">
                 {username || `Joueur ${seatID}`}
                 {chips !== undefined && ` (${chips} PTS)`}
             </span>
@@ -262,7 +262,7 @@ const Seat: React.FC<SeatProps> = ({
             {/* Cartes jouées par le joueur local visibles par tout le monde et lui même */}
             {/* Zone de drop et d'affichage des cartes jouées (visible uniquement pour le joueur local) */}
             <div
-                className={`${isSeatThree ? "relative bottom-[235%] flex flex-col-reverse" : "relative top-[35%]"} ${showCards && isDragOver ? 'bg-green-200 bg-opacity-20 rounded-lg' : ''
+                className={` ${isSeatThree ? "relative bottom-[235%] flex flex-col-reverse" : "relative top-[35%]"} ${showCards && isDragOver ? 'bg-green-200 bg-opacity-20 rounded-lg' : ''
                     } ${showCards ? 'min-h-[80px]' : ''}`}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
@@ -273,12 +273,12 @@ const Seat: React.FC<SeatProps> = ({
                 } : {})}
             >
                 {/* Étiquette "Mise" */}
-                <p className="relative text-white text-center w-[150px]">
+                <p className="relative text-white w-[150px] mt-1">
                     Mise: {seatBet ?? 0}
                 </p>
 
                 {/* Conteneur des cartes jouées */}
-                <div className={`relative mt-7`}>
+                <div className={`relative mt-2 left-4`}>
                     {playedCards.length === 0 && showCards && (
                         <div className={`text-white text-xs opacity-50 italic`}>Déposez ici</div>
                     )}
